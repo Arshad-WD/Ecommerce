@@ -1,3 +1,4 @@
+const AppError = require('../common/errors/app-error');
 const bcrypt = require('bcrypt');
 const prisma = require('../prisma/prisma.service');
 
@@ -19,7 +20,7 @@ class UserService {
         });
 
         if(!user){
-            throw new Error('User not found');
+            throw new AppError('User not found', 404);
         }
         return user;
     }

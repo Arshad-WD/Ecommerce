@@ -1,3 +1,4 @@
+const AppError = require('../common/errors/app-error');
 const bcrypt = require('bcrypt');
 const prisma = require('../prisma/prisma.service');
 const jwt = require('jsonwebtoken');
@@ -17,7 +18,7 @@ class AuthService {
         });
 
         if (existingUser) {
-            throw new Error('User already exists');
+            throw new AppError('User already exists', 400);
         }
 
         const hashedPassword = await bcrypt.hash(data.password, 10);
@@ -58,7 +59,7 @@ class AuthService {
         });
 
         if(!user){
-            throw new Error("Invalid Credentails");
+            throw new AppError("Invalid Credentails", 400);
         }
         const isPasswordValid = await bcrypt.compare(
             data.password,
@@ -66,7 +67,7 @@ class AuthService {
         );
 
         if(!isPasswordValid){
-            throw new Error("Invalid Credentials");
+            throw new AppError("Invalid Credentials", 401);
         }
 
         const accessToken = generateAccessToken(user);
@@ -109,7 +110,7 @@ class AuthService {
 
     async refreshToken(token) {
         if(!token){
-            throw new Error('Refresh token missing');
+            throw new AppError('Refresh token missing', 401);
         }
 
         const storedToken = await prisma.refreshToken.findFirst({
@@ -120,7 +121,7 @@ class AuthService {
         });
 
         if(!storedToken){
-            throw new Error('Invalid refresh Token');
+            throw new AppError('Invalid refresh Token', 401);
         }
 
 
@@ -136,7 +137,7 @@ class AuthService {
         });
 
         if(!user){
-            throw new Error('User not found');
+            throw new AppError('User not found', 404);
         }
 
         const newAccessToken = generateAccessToken(user);
@@ -167,7 +168,7 @@ class AuthService {
         });
 
         if(!user){
-            throw new Error('User not found');
+            throw new AppError('User not found', 404);
         }
 
         const resetToken = crypto
@@ -204,7 +205,7 @@ class AuthService {
         });
 
         if(!resetToken){
-            throw new Error('Invalid token');
+            throw new AppError('Invalid token', 401);
         }
 
         const hashedPassword = await bcrypt.hash(

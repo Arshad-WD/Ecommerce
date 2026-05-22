@@ -1,7 +1,7 @@
 const userService = require('./user.service');
 
 class UserController {
-  async getUserById(req, res) {
+  async getUserById(req, res, next) {
     try {
       const user =
         await userService.getUserById(
@@ -13,14 +13,11 @@ class UserController {
         data: user,
       });
     } catch (error) {
-      res.status(404).json({
-        success: false,
-        message: error.message,
-      });
+      next(error);
     }
   }
 
-  async updateUser(req, res) {
+  async updateUser(req, res, next) {
     try {
       const updatedUser =
         await userService.updateUser(
@@ -34,14 +31,11 @@ class UserController {
         data: updatedUser,
       });
     } catch (error) {
-      res.status(400).json({
-        success: false,
-        message: error.message,
-      });
+      next(error);
     }
   }
 
-  async deleteUser(req, res) {
+  async deleteUser(req, res, next) {
     try {
       await userService.deleteUser(
         req.params.id
@@ -52,10 +46,7 @@ class UserController {
         message: 'User deleted successfully',
       });
     } catch (error) {
-      res.status(400).json({
-        success: false,
-        message: error.message,
-      });
+      next(error);
     }
   }
 }

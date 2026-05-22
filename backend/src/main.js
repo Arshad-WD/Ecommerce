@@ -11,6 +11,11 @@ const userRoutes = require('./users/user.routes');
 const productRoutes = require('./products/product.routes');
 const categoryRoutes = require('./products/category.routes');
 const cartRoutes = require('./cart/cart.routes');
+const orderRoutes = require('./orders/order.routes');
+const addressRoutes = require('./addresses/address.route');
+
+const errorMiddleware = require('./common/middleware/error.middleware');
+
 
 const app = express();
 
@@ -42,6 +47,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/cart', cartRoutes);
+app.use('/api', orderRoutes);
+app.use('/api/addresses', addressRoutes);
 
 
 // 404 Handler
@@ -55,14 +62,7 @@ app.use((req, res)=>{
 
 // Global error Handler
 
-app.use((err, req, res, next) => {
-  console.error(err);
-  
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || 'Internal Server Error',
-  });
-});
+app.use(errorMiddleware);
 
 // Server
 const PORT = process.env.PORT || 5000

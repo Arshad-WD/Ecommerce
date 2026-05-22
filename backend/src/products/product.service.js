@@ -1,3 +1,4 @@
+const AppError = require('../common/errors/app-error');
 const prisma = require('../prisma/prisma.service');
 
 class ProductService {
@@ -107,7 +108,7 @@ class ProductService {
       });
 
     if (!product) {
-      throw new Error('Product not found');
+      throw new AppError('Product not found', 404);
     }
 
     return product;

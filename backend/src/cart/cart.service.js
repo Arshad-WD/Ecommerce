@@ -1,3 +1,4 @@
+const AppError = require('../common/errors/app-error');
 const prisma = require('../prisma/prisma.service');
 
 class CartService {
@@ -51,25 +52,21 @@ class CartService {
       });
 
     if (!product.isActive) {
-        throw new Error(
-            'Product is currently unavailable'
-        );
+        throw new AppError('Product is currently unavailable', 500);
     }
 
     if (data.quantity <= 0) {
-    throw new Error('Invalid quantity');
+    throw new AppError('Invalid quantity', 400);
     }
 
     if (
     data.quantity > product.stockQuantity
     ) {
-    throw new Error(
-        'Insufficient stock'
-    );
+    throw new AppError('Insufficient stock', 500);
     }
 
     if (!product) {
-      throw new Error('Product not found');
+      throw new AppError('Product not found', 404);
     }
 
     const existingItem =
@@ -89,9 +86,7 @@ class CartService {
         totalQuantity >
         product.stockQuantity
     ) {
-        throw new Error(
-        'Insufficient stock'
-        );
+        throw new AppError('Insufficient stock', 500);
     }
 
     return await prisma.cartItem.update({
@@ -133,11 +128,11 @@ class CartService {
       });
 
     if (!item) {
-      throw new Error('Cart item not found');
+      throw new AppError('Cart item not found', 404);
     }
 
     if (quantity <= 0) {
-    throw new Error('Invalid quantity');
+    throw new AppError('Invalid quantity', 400);
     }
 
     const product =
@@ -151,9 +146,7 @@ class CartService {
     quantity >
     product.stockQuantity
     ) {
-    throw new Error(
-        'Insufficient stock'
-    );
+    throw new AppError('Insufficient stock', 500);
     }
 
     return await prisma.cartItem.update({
@@ -180,7 +173,7 @@ class CartService {
       });
 
     if (!item) {
-      throw new Error('Cart item not found');
+      throw new AppError('Cart item not found', 404);
     }
 
     await prisma.cartItem.delete({

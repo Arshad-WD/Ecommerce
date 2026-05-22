@@ -1,7 +1,7 @@
 const cartService = require('./cart.service');
 
 class CartController {
-  async getCart(req, res) {
+  async getCart(req, res, next) {
     try {
       const cart =
         await cartService.getCart(
@@ -13,14 +13,11 @@ class CartController {
         data: cart,
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message,
-      });
+      next(error);
     }
   }
 
-  async addItem(req, res) {
+  async addItem(req, res, next) {
     try {
       const item =
         await cartService.addItem(
@@ -34,14 +31,11 @@ class CartController {
         data: item,
       });
     } catch (error) {
-      res.status(400).json({
-        success: false,
-        message: error.message,
-      });
+      next(error);
     }
   }
 
-  async updateItem(req, res) {
+  async updateItem(req, res, next) {
     try {
       const item =
         await cartService.updateItem(
@@ -56,14 +50,11 @@ class CartController {
         data: item,
       });
     } catch (error) {
-      res.status(400).json({
-        success: false,
-        message: error.message,
-      });
+      next(error);
     }
   }
 
-  async removeItem(req, res) {
+  async removeItem(req, res, next) {
     try {
       await cartService.removeItem(
         req.user.id,
@@ -75,14 +66,11 @@ class CartController {
         message: 'Item removed',
       });
     } catch (error) {
-      res.status(400).json({
-        success: false,
-        message: error.message,
-      });
+      next(error);
     }
   }
 
-  async clearCart(req, res) {
+  async clearCart(req, res, next) {
     try {
       await cartService.clearCart(
         req.user.id
@@ -93,10 +81,7 @@ class CartController {
         message: 'Cart cleared',
       });
     } catch (error) {
-      res.status(400).json({
-        success: false,
-        message: error.message,
-      });
+      next(error);
     }
   }
 }

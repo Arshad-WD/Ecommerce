@@ -3,7 +3,7 @@ const categoryService = require(
 );
 
 class CategoryController {
-  async getCategories(req, res) {
+  async getCategories(req, res, next) {
     try {
       const categories =
         await categoryService.getCategories();
@@ -13,14 +13,11 @@ class CategoryController {
         data: categories,
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message,
-      });
+      next(error);
     }
   }
 
-  async getCategoryById(req, res) {
+  async getCategoryById(req, res, next) {
     try {
       const category =
         await categoryService.getCategoryById(
@@ -32,14 +29,11 @@ class CategoryController {
         data: category,
       });
     } catch (error) {
-      res.status(404).json({
-        success: false,
-        message: error.message,
-      });
+      next(error);
     }
   }
 
-  async createCategory(req, res) {
+  async createCategory(req, res, next) {
     try {
       const category =
         await categoryService.createCategory(
@@ -52,14 +46,11 @@ class CategoryController {
         data: category,
       });
     } catch (error) {
-      res.status(400).json({
-        success: false,
-        message: error.message,
-      });
+      next(error);
     }
   }
 
-  async updateCategory(req, res) {
+  async updateCategory(req, res, next) {
     try {
       const category =
         await categoryService.updateCategory(
@@ -73,14 +64,11 @@ class CategoryController {
         data: category,
       });
     } catch (error) {
-      res.status(400).json({
-        success: false,
-        message: error.message,
-      });
+      next(error);
     }
   }
 
-  async deleteCategory(req, res) {
+  async deleteCategory(req, res, next) {
     try {
       await categoryService.deleteCategory(
         req.params.id
@@ -91,10 +79,7 @@ class CategoryController {
         message: 'Category deleted',
       });
     } catch (error) {
-      res.status(400).json({
-        success: false,
-        message: error.message,
-      });
+      next(error);
     }
   }
 }

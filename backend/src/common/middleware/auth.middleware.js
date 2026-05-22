@@ -1,22 +1,17 @@
 const jwt = require('jsonwebtoken');
+const AppError = require('../errors/app-error');
 
 const authMiddleware = (req, res, next) => {
     try{
         const authHeader = req.headers.authorization;
 
         if(!authHeader){
-            throw res.status(401).json({
-                success: false,
-                message: 'Access token missing',
-            });
+            throw new AppError('Access token missing', 401);
         }
         const token = authHeader.split(' ')[1];
 
         if(!token){
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid token format',
-            });
+            throw new AppError('Invalid token format', 401);
         }
 
         const decoded = jwt.verify(
@@ -28,10 +23,7 @@ const authMiddleware = (req, res, next) => {
 
         next();
     }catch(error){
-        return res.status(401).json({
-            success: false,
-            message: 'Unauthorized',
-        });
+        next(new AppError('Unauthorized', 401));
     }
 };
 

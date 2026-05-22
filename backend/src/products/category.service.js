@@ -1,3 +1,4 @@
+const AppError = require('../common/errors/app-error');
 const prisma = require('../prisma/prisma.service');
 
 class CategoryService {
@@ -25,7 +26,7 @@ class CategoryService {
       });
 
     if (!category) {
-      throw new Error('Category not found');
+      throw new AppError('Category not found', 404);
     }
 
     return category;
@@ -40,9 +41,7 @@ class CategoryService {
       });
 
     if (existingCategory) {
-      throw new Error(
-        'Category slug already exists'
-      );
+      throw new AppError('Category slug already exists', 400);
     }
 
     const category =

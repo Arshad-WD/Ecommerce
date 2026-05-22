@@ -1,7 +1,7 @@
 const authService = require("./auth.service");
 
 class AuthController {
-    async signup(req, res){
+    async signup(req, res, next) {
         try {
             const result = await authService.signup(req.body);
 
@@ -10,15 +10,12 @@ class AuthController {
                 message: 'User registered successfully',
                 data: result,
             });
-        }catch(error){
-            res.status(400).json({
-                success: false,
-                message: error.message,
-            });
-        }
+        }catch (error) {
+      next(error);
+    }
     }
 
-    async login(req, res){
+    async login(req, res, next) {
         try{
             const result =  await authService.login(req.body);
 
@@ -27,15 +24,12 @@ class AuthController {
                 message: 'Login Successful',
                 data: result,
             });
-        }catch(error){
-            res.status(401).json({
-                success: false,
-                message: error.message,
-            });
-        }
+        }catch (error) {
+      next(error);
+    }
     }
 
-    async me(req, res) {
+    async me(req, res, next) {
         try {
             const user =  await authService.getMe(req.user.id);
 
@@ -43,15 +37,12 @@ class AuthController {
                 success: true,
                 data: user,
             });
-        }catch(error){
-            res.status(500).json({
-                success: false,
-                message: error.message,
-            });
-        }
+        }catch (error) {
+      next(error);
+    }
     }
 
-    async refreshToken(req, res) {
+    async refreshToken(req, res, next) {
         try{
             const { refreshToken } = req.body;
 
@@ -64,15 +55,12 @@ class AuthController {
                 data: result,
             });
 
-        }catch(error){
-            res.status(401).json({
-                success: false,
-                message: error.message,
-            });
-        }
+        }catch (error) {
+      next(error);
+    }
     }
 
-    async logout(req, res) {
+    async logout(req, res, next) {
         try{
             const { refreshToken } = req.body;
 
@@ -82,15 +70,12 @@ class AuthController {
                 success: true,
                 message: 'Logged out successfully',
             });
-        }catch(error){
-            res.status(500).json({
-                success: false,
-                message: error.message,
-            });
-        }
+        }catch (error) {
+      next(error);
+    }
     }
 
-    async forgetPassword(req, res) {
+    async forgetPassword(req, res, next) {
         try {
             const result = 
                 await authService.forgetPassword(
@@ -102,15 +87,12 @@ class AuthController {
                     message: 'Reset token generated',
                     data: result,
                 });
-        }catch(error){
-            res.status(400).json({
-                success: false,
-                message: error.message,
-            });
-        }
+        }catch (error) {
+      next(error);
+    }
     }
 
-    async resetPassword(req, res){
+    async resetPassword(req, res, next) {
         try{
             await authService.resetPassword(
                 req.params.token,
@@ -121,12 +103,9 @@ class AuthController {
                 success:true,
                 message: 'Password reset successful',
             });
-        }catch(error){
-            res.status(400).json({
-                success: false,
-                message: error.message,                
-            });
-        }
+        }catch (error) {
+      next(error);
+    }
     }
 }
 

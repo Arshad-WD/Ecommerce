@@ -1,7 +1,7 @@
 const productService = require('./product.service');
 
 class ProductController {
-  async getProducts(req, res) {
+  async getProducts(req, res, next) {
     try {
       const products =
         await productService.getProducts(
@@ -13,14 +13,11 @@ class ProductController {
         data: products,
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message,
-      });
+      next(error);
     }
   }
 
-  async getProductById(req, res) {
+  async getProductById(req, res, next) {
     try {
       const product =
         await productService.getProductById(
@@ -32,14 +29,11 @@ class ProductController {
         data: product,
       });
     } catch (error) {
-      res.status(404).json({
-        success: false,
-        message: error.message,
-      });
+      next(error);
     }
   }
 
-  async createProduct(req, res) {
+  async createProduct(req, res, next) {
     try {
       const product =
         await productService.createProduct(
@@ -52,14 +46,11 @@ class ProductController {
         data: product,
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message,
-      });
+      next(error);
     }
   }
 
-  async updateProduct(req, res) {
+  async updateProduct(req, res, next) {
     try {
       const product =
         await productService.updateProduct(
@@ -73,14 +64,11 @@ class ProductController {
         data: product,
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message,
-      });
+      next(error);
     }
   }
 
-  async deleteProduct(req, res) {
+  async deleteProduct(req, res, next) {
     try {
       await productService.deleteProduct(
         req.params.id
@@ -91,14 +79,11 @@ class ProductController {
         message: 'Product deleted',
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message,
-      });
+      next(error);
     }
   }
   
-  async uploadImages(req, res) {
+  async uploadImages(req, res, next) {
     try {
         const uploadService = require(
         './upload.service'
@@ -116,11 +101,8 @@ class ProductController {
         data: images,
         });
         } catch (error) {
-            res.status(500).json({
-            success: false,
-            message: error.message,
-            });
-        }
+      next(error);
+    }
     }
 }
 
