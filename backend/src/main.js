@@ -9,7 +9,6 @@ const cors = require('cors');
 const authRoutes = require('./auth/auth.routes');
 const userRoutes = require('./users/user.routes');
 const productRoutes = require('./products/product.routes');
-const categoryRoutes = require('./products/category.routes');
 const cartRoutes = require('./cart/cart.routes');
 const orderRoutes = require('./orders/order.routes');
 const adminRoutes = require('./admin/admin.routes');
