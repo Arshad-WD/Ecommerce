@@ -7,7 +7,7 @@ import { products as initialProducts, categories as initialCategories, orders as
 
 // --- CONFIGURATION ---
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-const USE_MOCK = true; // Toggle false to connect immediately to a live backend service
+const USE_MOCK = false; // Toggle false to connect immediately to a live backend service
 
 // Network latency simulator
 const simulateNetwork = (ms = 250) => new Promise((resolve) => setTimeout(resolve, ms));
