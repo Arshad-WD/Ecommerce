@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #111111;
+  --secondary: #f5f5f5;
+  --border: #e5e5e5;
+  --muted: #666666;
+  --card: #ffffff;
+}
+
+/* Force dark theme targeting when .dark class is present on html/body */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ffffff;
+  --secondary: #111111;
+  --border: #222222;
+  --muted: #999999;
+  --card: #0c0c0c;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-secondary: var(--secondary);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-card: var(--card);
+  
+  --font-serif: var(--font-playfair), Georgia, serif;
+  --font-sans: var(--font-geist-sans), Inter, system-ui, sans-serif;
+}
+
+/* Custom styling for luxury typography & interactions */
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), sans-serif;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+  overflow-x: hidden;
+}
+
+/* Soft minimalist custom scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--foreground);
+}
+
+/* Elegant visual focus outlines */
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--foreground) !important;
+}
+
+/* Subtle image load placeholder animations */
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.3; }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Smooth active menu indicators */
+.nav-link-underline {
+  position: relative;
+}
+
+.nav-link-underline::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  transform: scaleX(0);
+  height: 1px;
+  bottom: -4px;
+  left: 0;
+  background-color: var(--foreground);
+  transform-origin: bottom right;
+  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.nav-link-underline:hover::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
+}

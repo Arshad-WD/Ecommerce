@@ -1,0 +1,124 @@
+'use client';
+
+import AuthSplitLayout from '@/components/auth/AuthSplitLayout';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+export default function LoginPage() {
+  const router = useRouter();
+
+  const handleLoginSubmit = (e) => {
+    e.preventDefault();
+    alert('Atelier Authenticated (Demo Mode). Redirecting to Dashboard.');
+    router.push('/profile');
+  };
+
+  return (
+    <AuthSplitLayout
+      image="https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=1200"
+      title="The Minimal Uniform"
+      quote='"Clarity and luxury reside in the absolute restraint of structural layers."'
+    >
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="space-y-2">
+          <span className="text-[9px] tracking-[0.2em] font-semibold text-muted uppercase block">
+            Atelier Authentication
+          </span>
+          <h2 className="font-serif text-2xl md:text-3xl uppercase tracking-wide text-foreground">
+            Sign In
+          </h2>
+          <p className="text-xs text-muted font-medium">
+            Enter your credentials to access your bespoke dashboard.
+          </p>
+        </div>
+
+        {/* Input Form */}
+        <form onSubmit={handleLoginSubmit} className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-[9px] uppercase tracking-widest font-bold text-muted block">
+              Email Address
+            </label>
+            <input
+              type="email"
+              required
+              placeholder="sterling@atelier.com"
+              className="w-full px-4 py-2.5 bg-secondary/35 border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
+              id="login-email-input"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex justify-between items-center">
+              <label className="text-[9px] uppercase tracking-widest font-bold text-muted block">
+                Password
+              </label>
+              <button
+                type="button"
+                onClick={() => alert('Demo Mode: Password resets disabled.')}
+                className="text-[9px] uppercase tracking-widest text-muted hover:text-foreground font-bold underline"
+              >
+                Forgot?
+              </button>
+            </div>
+            <input
+              type="password"
+              required
+              placeholder="••••••••"
+              className="w-full px-4 py-2.5 bg-secondary/35 border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
+              id="login-password-input"
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="w-full py-3.5 bg-foreground text-background dark:bg-white dark:text-neutral-950 text-xs uppercase tracking-widest font-bold rounded-xl hover:opacity-90 transition-opacity mt-2"
+            id="login-submit-button"
+          >
+            Sign In
+          </button>
+        </form>
+
+        {/* Separator */}
+        <div className="relative my-4">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border" />
+          </div>
+          <div className="relative flex justify-center text-[9px] uppercase font-bold text-muted tracking-widest">
+            <span className="bg-background px-3">Or Authenticate With</span>
+          </div>
+        </div>
+
+        {/* Social auth triggers */}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => {
+              alert('Redirecting to Google authenticator...');
+              router.push('/profile');
+            }}
+            className="py-3 border border-border rounded-xl text-[10px] font-bold tracking-widest uppercase hover:bg-secondary transition-colors"
+          >
+            Google
+          </button>
+          <button
+            onClick={() => {
+              alert('Redirecting to Apple ID authenticator...');
+              router.push('/profile');
+            }}
+            className="py-3 border border-border rounded-xl text-[10px] font-bold tracking-widest uppercase hover:bg-secondary transition-colors"
+          >
+            Apple Pay
+          </button>
+        </div>
+
+        {/* Account redirect */}
+        <p className="text-center text-xs text-muted font-medium pt-4">
+          Don't have an account?{' '}
+          <Link href="/register" className="text-foreground font-bold hover:underline">
+            Register Here
+          </Link>
+        </p>
+      </div>
+    </AuthSplitLayout>
+  );
+}
