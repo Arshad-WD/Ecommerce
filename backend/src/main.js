@@ -9,9 +9,9 @@ const cors = require('cors');
 const authRoutes = require('./auth/auth.routes');
 const userRoutes = require('./users/user.routes');
 const productRoutes = require('./products/product.routes');
-const categoryRoutes = require('./products/category.routes');
 const cartRoutes = require('./cart/cart.routes');
 const orderRoutes = require('./orders/order.routes');
+const adminRoutes = require('./admin/admin.routes');
 
 const errorMiddleware = require('./common/middleware/error.middleware');
 
@@ -44,9 +44,9 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
-app.use('/api/categories', categoryRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api', orderRoutes);
+app.use('/api/admin', adminRoutes);
 
 
 // 404 Handler

@@ -12,7 +12,7 @@ router.post('/refresh-token', authController.refreshToken);
 
 router.post('/logout', authController.logout);
 
-router.post('/forget-password', authController.forgetPassword);
+router.post('/forgot-password', authController.forgetPassword);
 router.post('/reset-password/:token', authController.resetPassword);
 
 // router.post('/admin', authMiddleware, adminMiddleware, productController.createProduct);
