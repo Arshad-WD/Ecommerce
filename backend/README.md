@@ -704,6 +704,88 @@ DELETE /api/cart
 
 ---
 
+# ORDER & CHECKOUT APIs
+
+---
+
+# 1. Checkout
+
+## Endpoint
+
+```http
+POST /api/checkout
+```
+
+---
+
+## Headers
+
+```txt
+Authorization: Bearer TOKEN
+```
+
+---
+
+## Body
+
+```json
+{
+  "shippingAddressId": "ADDRESS_ID"
+}
+```
+
+---
+
+# 2. Get My Orders
+
+## Endpoint
+
+```http
+GET /api/orders/my
+```
+
+---
+
+# 3. Get Order By ID
+
+## Endpoint
+
+```http
+GET /api/orders/:id
+```
+
+---
+
+# 4. Get All Orders (Admin)
+
+## Endpoint
+
+```http
+GET /api/admin/orders
+```
+
+---
+
+# 5. Update Order Status (Admin)
+
+## Endpoint
+
+```http
+PUT /api/admin/orders/:id/status
+```
+
+---
+
+## Body
+
+```json
+{
+  "status": "PROCESSING"
+}
+```
+
+---
+
 # IMPORTANT TESTING FLOW
 
 Recommended order:
@@ -712,17 +794,19 @@ Recommended order:
 1. Signup
 2. Login
 3. Copy JWT token
-4. Create category
-5. Create product
-6. Upload product image
+4. Create category (Admin)
+5. Create product (Admin)
+6. Upload product image (Admin)
 7. Add product to cart
-8. Update cart quantity
-9. Clear cart
+8. Create an address
+9. Checkout
+10. Update order status (Admin)
+11. Clear cart
 ```
 
 ---
 
-# COMMON ERRORS
+# COMMON ERRORS...
 
 # 401 Unauthorized
 
@@ -781,11 +865,10 @@ Check terminal logs.
 After current testing:
 
 ```txt
-Checkout
-Orders
 Payments
 Inventory
 Analytics
 ```
 
 These depend on all current modules working correctly.
+
