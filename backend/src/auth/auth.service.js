@@ -1,5 +1,7 @@
 const bcrypt = require('bcrypt');
 const prisma = require('../prisma/prisma.service');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 const {
     generateAccessToken,
@@ -85,6 +87,146 @@ class AuthService {
             accessToken,
             refreshToken,
         };
+    }
+    async getMe(userId){
+        const user = await prisma.user.findUnique({
+
+            where: {
+                id: userId,
+            },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                avatarUrl: true,
+                createdAt: true,
+            },
+        });
+
+        return user;
+    }
+
+    async refreshToken(token) {
+        if(!token){
+            throw new Error('Refresh token missing');
+        }
+
+        const storedToken = await prisma.refreshToken.findFirst({
+            where: {
+                token, 
+                revoked: false,
+            },
+        });
+
+        if(!storedToken){
+            throw new Error('Invalid refresh Token');
+        }
+
+
+        const decoded = jwt.verify(
+            token,
+            process.env.JWT_REFRESH_SECRET
+        );
+
+        const user = await prisma.user.findUnique({
+            where: {
+                id: decoded.id,
+            },
+        });
+
+        if(!user){
+            throw new Error('User not found');
+        }
+
+        const newAccessToken = generateAccessToken(user);
+
+        return {
+            accessToken: newAccessToken,
+        };
+    }
+
+    async logout(refreshToken){
+        await prisma.refreshToken.updateMany({
+            where: {
+                token: refreshToken,
+            },
+            data: {
+                revoked: true,
+            },
+        });
+
+        return true;
+    }
+
+    async forgotPassword(email){
+        const user = await prisma.user.findUnique({
+            where: {
+                email,
+            },
+        });
+
+        if(!user){
+            throw new Error('User not found');
+        }
+
+        const resetToken = crypto
+        .randomBytes(32)
+        .toString('hex');
+
+        const expiresAt = new Date(
+            Date.now() + 15 * 60 * 1000
+        );
+
+        await prisma.passwordResetToken.create({
+            data: {
+                userId: user.id,
+                token: resetToken,
+                expiresAt,
+            },
+        });
+
+        //TODO:
+        //Send email using Resend Later
+
+        return {
+            resetToken,
+        };
+    }
+
+    async resetPassword(token, newPassword){
+        const resetToken = 
+        await prisma.passwordResetToken.findFirst({
+            where: {
+                token, 
+                used: false,
+            },
+        });
+
+        if(!resetToken){
+            throw new Error('Invalid token');
+        }
+
+        const hashedPassword = await bcrypt.hash(
+            newPassword,
+            10
+        );
+
+        await prisma.user.update({
+            where: {
+                id: resetToken.userId,
+            },
+        });
+
+        await prisma.passwordResetToken.update({
+            where: {
+                id: resetToken.id,
+            },
+            data: {
+                used: true,
+            },
+        });
+        return true;
     }
 }
 

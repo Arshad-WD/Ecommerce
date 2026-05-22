@@ -7,6 +7,10 @@ const cors = require('cors');
 
 // Routers Imports
 const authRoutes = require('./auth/auth.routes');
+const userRoutes = require('./users/user.routes');
+const productRoutes = require('./products/product.routes');
+const categoryRoutes = require('./products/category.routes');
+const cartRoutes = require('./cart/cart.routes');
 
 const app = express();
 
@@ -32,7 +36,13 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes
+
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/cart', cartRoutes);
+
 
 // 404 Handler
 
