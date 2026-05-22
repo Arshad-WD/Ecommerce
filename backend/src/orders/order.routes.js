@@ -5,11 +5,11 @@ const orderController = require(
 );
 
 const authMiddleware = require(
-  '../middlewares/auth.middleware'
+  '../common/middleware/auth.middleware'
 );
 
 const adminMiddleware = require(
-  '../middlewares/admin.middleware'
+  '../common/middleware/admin.middleware'
 );
 
 router.post(

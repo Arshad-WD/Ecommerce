@@ -12,7 +12,6 @@ const productRoutes = require('./products/product.routes');
 const categoryRoutes = require('./products/category.routes');
 const cartRoutes = require('./cart/cart.routes');
 const orderRoutes = require('./orders/order.routes');
-const addressRoutes = require('./addresses/address.route');
 
 const errorMiddleware = require('./common/middleware/error.middleware');
 
@@ -48,7 +47,6 @@ app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api', orderRoutes);
-app.use('/api/addresses', addressRoutes);
 
 
 // 404 Handler

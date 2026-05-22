@@ -5,7 +5,7 @@ const addressController = require(
 );
 
 const authMiddleware = require(
-  '../middlewares/auth.middleware'
+  '../common/middleware/auth.middleware'
 );
 
 router.use(authMiddleware);

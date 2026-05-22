@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('./user.controller');
-const authMiddleware = require('../middlewares/auth.middleware');
-const adminMiddleware = require('../middlewares/admin.middleware');
+const authMiddleware = require('../common/middleware/auth.middleware');
+const adminMiddleware = require('../common/middleware/admin.middleware');
 
 const selfOrAdminMiddleware = require(
-  '../middlewares/self-or-admin.middleware'
+  '../common/middleware/self-or-admin.middleware'
 );
 
 router.get(
