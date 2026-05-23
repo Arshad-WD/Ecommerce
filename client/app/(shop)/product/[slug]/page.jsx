@@ -10,33 +10,82 @@ import Accordion from '@/components/shared/Accordion';
 import { formatCurrency } from '@/lib/utils';
 import { Heart, ShoppingBag, Star, ArrowLeft, Minus, Plus } from 'lucide-react';
 import Link from 'next/link';
+import { productApi } from '@/lib/api';
 
 export default function ProductDetailsPage() {
   const params = useParams();
   const { slug } = params;
   
-  // 1. Fetch current active product
-  const product = products.find((prod) => prod.slug === slug);
+  // Refactor: Move from mock `find` to actual unified api state
   const { cart, wishlist, toggleWishlist, addToCart } = useShop();
 
-  if (!product) {
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
+
+  // 2. Local Customization States
+  const [selectedSize, setSelectedSize] = useState('M'); // default fallback
+  const [selectedColor, setSelectedColor] = useState('Black'); // default fallback
+  const [quantity, setQuantity] = useState(1);
+  const [addedNotification, setAddedNotification] = useState(false);
+  const [relatedProducts, setRelatedProducts] = useState([]);
+
+  useEffect(() => {
+    async function loadProduct() {
+      try {
+        setLoading(true);
+        const res = await productApi.getProductDetails(slug);
+        const fetchedProduct = res?.data || res;
+        
+        if (fetchedProduct) {
+          // Normalize Images: MinIO returns { id, url }, Map to strings
+          let normalizedImages = [];
+          if (fetchedProduct.images && Array.isArray(fetchedProduct.images)) {
+             normalizedImages = fetchedProduct.images.map(img => typeof img === 'object' && img !== null ? (img.imageUrl || img.url) : img);
+          }
+          if (normalizedImages.length === 0) {
+            normalizedImages = ['https://images.unsplash.com/photo-1591047139829-d91aecb6caea?q=80&w=1000&auto=format&fit=crop']; // Fallback placeholder
+          }
+          fetchedProduct.images = normalizedImages;
+
+          // Normalize sizes/colors structurally if backend schema is limited
+          fetchedProduct.sizes = fetchedProduct.sizes || ['S', 'M', 'L', 'XL'];
+          fetchedProduct.colors = fetchedProduct.colors || ['Black', 'Off-White'];
+
+          setProduct(fetchedProduct);
+          setSelectedSize(fetchedProduct.sizes[0]);
+          setSelectedColor(fetchedProduct.colors[0]);
+
+          // Optional: Fetch related items by category
+          const catId = typeof fetchedProduct.category === 'object' ? fetchedProduct.category?.id : fetchedProduct.categoryId;
+          if (catId) {
+             const relatedRes = await productApi.listProducts({ category: catId, limit: 5 });
+             const relList = relatedRes?.products || relatedRes?.data?.products || [];
+             setRelatedProducts(relList.filter(p => p.id !== fetchedProduct.id).slice(0, 4));
+          }
+        } else {
+          setFetchError(true);
+        }
+      } catch (err) {
+        console.error("Failed to load product details:", err);
+        setFetchError(true);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadProduct();
+  }, [slug]);
+
+  if (loading) {
+     return <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center text-muted font-serif animate-pulse">Loading collection piece...</div>;
+  }
+
+  if (fetchError || !product) {
     notFound();
   }
 
-  // 2. Local Customization States
-  const [selectedSize, setSelectedSize] = useState(product.sizes[0]);
-  const [selectedColor, setSelectedColor] = useState(product.colors[0]);
-  const [quantity, setQuantity] = useState(1);
-  const [addedNotification, setAddedNotification] = useState(false);
-
   // Extract reviews for this product
   const productReviews = mockReviews.filter((rev) => rev.productId === product.id);
-
-  // Find related products in the same category (excluding current)
-  const relatedProducts = products
-    .filter((prod) => prod.category === product.category && prod.id !== product.id)
-    .slice(0, 4);
-
   const isWishlisted = wishlist.includes(product.id);
 
   const handleAddToCart = () => {
@@ -44,6 +93,8 @@ export default function ProductDetailsPage() {
     setAddedNotification(true);
     setTimeout(() => setAddedNotification(false), 2500);
   };
+
+  const catName = typeof product.category === 'object' && product.category !== null ? product.category.name : (product.category || 'Atelier');
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
@@ -55,7 +106,7 @@ export default function ProductDetailsPage() {
           <span>/</span>
           <Link href="/products" className="hover:text-foreground">Collection</Link>
           <span>/</span>
-          <Link href={`/products?category=${product.category}`} className="hover:text-foreground capitalize">{product.category}</Link>
+          <Link href={`/products?category=${typeof product.category === 'object' ? product.category?.id : product.category}`} className="hover:text-foreground capitalize">{catName}</Link>
           <span>/</span>
           <span className="text-foreground line-clamp-1">{product.name}</span>
         </div>
@@ -78,7 +129,7 @@ export default function ProductDetailsPage() {
           {/* Header titles */}
           <div className="border-b border-border pb-6 mb-6">
             <span className="text-[10px] tracking-[0.25em] font-semibold text-muted uppercase">
-              {product.category}
+              {catName}
             </span>
             <h1 className="font-serif text-3xl md:text-4xl font-normal uppercase tracking-wide text-foreground mt-2 mb-3">
               {product.name}
@@ -91,15 +142,15 @@ export default function ProductDetailsPage() {
                   <Star
                     key={i}
                     className={`w-3.5 h-3.5 ${
-                      i < Math.floor(product.rating)
+                      i < Math.floor(product.rating || 5)
                         ? 'fill-foreground stroke-foreground dark:fill-white dark:stroke-white'
                         : 'stroke-neutral-300 dark:stroke-neutral-700'
                     }`}
                   />
                 ))}
               </div>
-              <span>{product.rating}</span>
-              <span className="text-muted">({product.reviewsCount} reviews)</span>
+              <span>{product.rating || "5.0"}</span>
+              <span className="text-muted">({product.reviewsCount || 0} reviews)</span>
             </div>
           </div>
 
