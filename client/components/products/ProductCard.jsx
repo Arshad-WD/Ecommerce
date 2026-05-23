@@ -69,7 +69,7 @@ export default function ProductCard({ product }) {
         {/* Favorite Heart Trigger */}  
         <button
           onClick={handleWishlistClick}
-          className="absolute top-4 right-4 p-2 bg-background/90 dark:bg-neutral-900/90 border border-border/50 rounded-full text-foreground hover:bg-background shadow-sm hover:scale-105 transition-all z-20"
+          className="absolute top-4 right-4 p-2 bg-background/90 dark:bg-neutral-900/90 border border-border/50 rounded-full text-foreground  shadow-sm hover:scale-105 transition-all z-20"
           
           aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
           id={`wishlist-button-${id}`}

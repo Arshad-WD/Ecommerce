@@ -14,7 +14,7 @@ class OrderService {
       include: {
         items: true,
 
-        payment: true,
+        payments: true,
       },
 
       orderBy: {
@@ -35,7 +35,7 @@ class OrderService {
         include: {
           items: true,
 
-          payment: true,
+          payments: true,
 
           shippingAddress: true,
         },
@@ -61,7 +61,7 @@ class OrderService {
 
         items: true,
 
-        payment: true,
+        payments: true,
       },
 
       orderBy: {

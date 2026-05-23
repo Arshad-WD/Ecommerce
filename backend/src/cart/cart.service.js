@@ -51,6 +51,10 @@ class CartService {
         },
       });
 
+    if (!product) {
+      throw new AppError('Product not found', 404);
+    }
+
     if (!product.isActive) {
         throw new AppError('Product is currently unavailable', 500);
     }
@@ -63,10 +67,6 @@ class CartService {
     data.quantity > product.stockQuantity
     ) {
     throw new AppError('Insufficient stock', 500);
-    }
-
-    if (!product) {
-      throw new AppError('Product not found', 404);
     }
 
     const existingItem =

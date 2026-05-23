@@ -1,20 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useShop } from '@/lib/ShopContext';
-import { orders as mockOrders } from '@/lib/mock-data';
 import ProfileSidebar from '@/components/profile/ProfileSidebar';
 import OrderCard from '@/components/profile/OrderCard';
-import { User, ShoppingBag, Heart, MapPin, Settings, Plus, Trash2, Edit } from 'lucide-react';
+import { Plus, Trash2, Edit } from 'lucide-react';
 import Link from 'next/link';
-import { formatCurrency } from '@/lib/utils';
 
 export default function ProfilePage() {
-  const { user, wishlist, cart, setUser } = useShop();
+  const router = useRouter();
+  const { user, sessionLoading, wishlist, cart, setUser } = useShop();
   const [activeTab, setActiveTab] = useState('overview');
+  const [ordersList, setOrdersList] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
 
   // Address simulation state
-  const [addresses, setAddresses] = useState(user.addresses);
+  const [addresses, setAddresses] = useState([]);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [newAddress, setNewAddress] = useState({
     label: '',
@@ -27,16 +29,69 @@ export default function ProfilePage() {
 
   // Settings form state
   const [settingsForm, setSettingsForm] = useState({
-    name: user.name,
-    email: user.email,
+    name: '',
+    email: '',
   });
+
+  // Protect route
+  useEffect(() => {
+    if (!sessionLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, sessionLoading, router]);
+
+  // Sync user values once loaded
+  useEffect(() => {
+    if (user) {
+      setAddresses(user.addresses || []);
+      setSettingsForm({
+        name: user.name || '',
+        email: user.email || '',
+      });
+
+      // Fetch live order histories from backend
+      setLoadingOrders(true);
+      import('@/lib/api').then(({ orderApi }) => {
+        orderApi.ordersHistory().then((res) => {
+          if (res.success && res.data) {
+            setOrdersList(res.data);
+          }
+        }).catch(err => console.error(err))
+        .finally(() => setLoadingOrders(false));
+      });
+    }
+  }, [user]);
+
+  if (sessionLoading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-32 text-center font-serif text-lg italic text-muted animate-pulse">
+        Loading Atelier Account...
+      </div>
+    );
+  }
+
+  if (!user) return null;
 
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
-  const handleSaveSettings = (e) => {
+  const handleSaveSettings = async (e) => {
     e.preventDefault();
-    setUser({ ...user, name: settingsForm.name, email: settingsForm.email });
-    alert('Account settings updated successfully.');
+    try {
+      const { userApi } = await import('@/lib/api');
+      const res = await userApi.updateUser(user.id, {
+        name: settingsForm.name,
+        email: settingsForm.email,
+      });
+      if (res.success && res.user) {
+        setUser(res.user);
+        alert('Account settings updated successfully.');
+      } else {
+        alert(res.message || 'Failed to update settings.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('An error occurred while updating settings.');
+    }
   };
 
   const handleAddAddress = (e) => {
@@ -63,6 +118,39 @@ export default function ProfilePage() {
     setUser({ ...user, addresses: updated });
   };
 
+  // Map backend order to OrderCard properties
+  const mappedOrders = ordersList.map(o => ({
+    id: o.id,
+    date: new Date(o.placedAt || o.createdAt).toISOString().split('T')[0],
+    status: o.status,
+    total: Number(o.totalAmount),
+    paymentMethod: o.payments && o.payments.length > 0 ? o.payments[0].provider : 'Apple Pay',
+    items: o.items ? o.items.map(item => ({
+      id: item.id,
+      name: item.productName,
+      size: 'M',
+      color: 'Black',
+      quantity: item.quantity,
+      price: Number(item.productPrice),
+      image: item.product?.images && item.product.images.length > 0 
+        ? item.product.images[0].imageUrl 
+        : 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=300'
+    })) : [],
+    shippingAddress: o.shippingAddress ? {
+      street: o.shippingAddress.addressLine1 + (o.shippingAddress.addressLine2 ? ', ' + o.shippingAddress.addressLine2 : ''),
+      city: o.shippingAddress.city,
+      state: o.shippingAddress.state,
+      zip: o.shippingAddress.postalCode,
+      country: o.shippingAddress.country
+    } : {
+      street: '144 Crosby Street, Suite 4B',
+      city: 'New York',
+      state: 'NY',
+      zip: '10012',
+      country: 'United States'
+    }
+  }));
+
   // Render content based on selected tab
   const renderTabContent = () => {
     switch (activeTab) {
@@ -73,7 +161,7 @@ export default function ProfilePage() {
             <div className="grid grid-cols-3 gap-4">
               <div className="border border-border p-4 rounded-xl bg-secondary/10">
                 <span className="text-[9px] uppercase tracking-wider text-muted font-semibold block">Total Orders</span>
-                <span className="font-serif text-2xl font-bold block mt-1">{mockOrders.length}</span>
+                <span className="font-serif text-2xl font-bold block mt-1">{mappedOrders.length}</span>
               </div>
               <div className="border border-border p-4 rounded-xl bg-secondary/10">
                 <span className="text-[9px] uppercase tracking-wider text-muted font-semibold block">Wishlisted Items</span>
@@ -97,9 +185,11 @@ export default function ProfilePage() {
                 </button>
               </div>
 
-              {mockOrders.length > 0 ? (
+              {loadingOrders ? (
+                <div className="py-6 text-xs text-muted">Retrieving order logs...</div>
+              ) : mappedOrders.length > 0 ? (
                 <div className="space-y-4">
-                  {mockOrders.slice(0, 1).map((order) => (
+                  {mappedOrders.slice(0, 1).map((order) => (
                     <OrderCard key={order.id} order={order} />
                   ))}
                 </div>
@@ -149,9 +239,11 @@ export default function ProfilePage() {
             <h4 className="font-serif text-lg font-semibold uppercase text-foreground border-b border-border pb-3 mb-6">
               Complete Order Log
             </h4>
-            {mockOrders.length > 0 ? (
+            {loadingOrders ? (
+              <div className="py-12 text-center text-xs text-muted font-serif italic">Retrieving order logs...</div>
+            ) : mappedOrders.length > 0 ? (
               <div className="space-y-6">
-                {mockOrders.map((order) => (
+                {mappedOrders.map((order) => (
                   <OrderCard key={order.id} order={order} />
                 ))}
               </div>
@@ -181,7 +273,6 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* Dynamic address addition form simulator */}
             {showAddressForm && (
               <form onSubmit={handleAddAddress} className="border border-border p-6 rounded-xl bg-secondary/15 space-y-4">
                 <span className="text-[9px] uppercase tracking-[0.2em] font-semibold text-muted block mb-2">
@@ -269,7 +360,6 @@ export default function ProfilePage() {
               </form>
             )}
 
-            {/* List addresses */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {addresses.map((addr) => (
                 <div
@@ -300,13 +390,13 @@ export default function ProfilePage() {
                       onClick={() => alert('Editing addresses disabled in prototype.')}
                       className="hover:text-foreground flex items-center gap-1 transition-colors"
                     >
-                      <Edit className="w-3 h-3 stroke-[1.5]" /> Edit
+                      <Edit className="w-3.5 h-3.5 stroke-[1.5]" /> Edit
                     </button>
                     <button
                       onClick={() => handleDeleteAddress(addr.id)}
                       className="hover:text-red-600 flex items-center gap-1 transition-colors"
                     >
-                      <Trash2 className="w-3 h-3 stroke-[1.5]" /> Delete
+                      <Trash2 className="w-3.5 h-3.5 stroke-[1.5]" /> Delete
                     </button>
                   </div>
                 </div>

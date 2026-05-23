@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { notFound, useParams } from 'next/navigation';
-import { products, reviews as mockReviews } from '@/lib/mock-data';
+import { useParams } from 'next/navigation';
 import { useShop } from '@/lib/ShopContext';
 import ProductGallery from '@/components/products/ProductGallery';
 import ProductCard from '@/components/products/ProductCard';
@@ -14,28 +13,70 @@ import Link from 'next/link';
 export default function ProductDetailsPage() {
   const params = useParams();
   const { slug } = params;
-  
-  // 1. Fetch current active product
-  const product = products.find((prod) => prod.slug === slug);
   const { cart, wishlist, toggleWishlist, addToCart } = useShop();
 
-  if (!product) {
-    notFound();
-  }
-
-  // 2. Local Customization States
-  const [selectedSize, setSelectedSize] = useState(product.sizes[0]);
-  const [selectedColor, setSelectedColor] = useState(product.colors[0]);
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedSize, setSelectedSize] = useState('');
+  const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [addedNotification, setAddedNotification] = useState(false);
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [productReviews, setProductReviews] = useState([]);
 
-  // Extract reviews for this product
-  const productReviews = mockReviews.filter((rev) => rev.productId === product.id);
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    import('@/lib/api').then(({ productApi }) => {
+      productApi.getProductDetails(slug).then((prod) => {
+        if (active && prod) {
+          setProduct(prod);
+          setSelectedSize(prod.sizes[0] || 'M');
+          setSelectedColor(prod.colors[0] || 'Black');
+          setProductReviews(prod.reviews ? prod.reviews.map(rev => ({
+            id: rev.id,
+            userName: rev.user?.name || 'Anonymous Client',
+            rating: rev.rating,
+            comment: rev.comment,
+            date: new Date(rev.createdAt).toISOString().split('T')[0]
+          })) : []);
 
-  // Find related products in the same category (excluding current)
-  const relatedProducts = products
-    .filter((prod) => prod.category === product.category && prod.id !== product.id)
-    .slice(0, 4);
+          // Load related garments
+          productApi.listProducts({ category: prod.category }).then((res) => {
+            if (active && res.products) {
+              setRelatedProducts(res.products.filter(p => p.id !== prod.id).slice(0, 4));
+            }
+          });
+          setLoading(false);
+        } else if (active) {
+          setLoading(false);
+        }
+      }).catch(err => {
+        console.error(err);
+        if (active) setLoading(false);
+      });
+    });
+    return () => { active = false; };
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-32 text-center font-serif text-lg italic text-muted animate-pulse">
+        Loading Atelier Silhouette...
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-32 text-center font-serif text-lg italic text-muted">
+        Garment not found.
+        <Link href="/products" className="underline font-bold tracking-widest uppercase text-xs block mt-4">
+          Return to Catalog
+        </Link>
+      </div>
+    );
+  }
 
   const isWishlisted = wishlist.includes(product.id);
 

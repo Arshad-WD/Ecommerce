@@ -1,15 +1,40 @@
 'use client';
 
+import { useState } from 'react';
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout';
 import { useRouter } from 'next/navigation';
+import { authApi } from '@/lib/api';
 
 export default function AdminLoginPage() {
   const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleAdminSubmit = (e) => {
+  const handleAdminSubmit = async (e) => {
     e.preventDefault();
-    alert('Administrative Access Granted. Initializing Command Panel (Simulation).');
-    router.push('/');
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await authApi.login({ email, password });
+      if (res.success && res.user) {
+        if (res.user.role === 'ADMIN') {
+          alert('Administrative Access Granted. Initializing Command Panel.');
+          router.push('/admin');
+        } else {
+          setError('Access Denied: Unrecognized administrative credentials.');
+        }
+      } else {
+        setError(res.message || 'Invalid administrator passkey.');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('An error occurred during secure command initialization.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -32,6 +57,13 @@ export default function AdminLoginPage() {
           </p>
         </div>
 
+        {/* Premium Error Alert */}
+        {error && (
+          <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-600 rounded-xl text-xs font-semibold tracking-wide uppercase">
+            {error}
+          </div>
+        )}
+
         {/* Input Form */}
         <form onSubmit={handleAdminSubmit} className="space-y-4">
           <div className="space-y-1">
@@ -41,6 +73,8 @@ export default function AdminLoginPage() {
             <input
               type="email"
               required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="admin@atelier.com"
               className="w-full px-4 py-2.5 bg-secondary/35 border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
               id="admin-email-input"
@@ -56,6 +90,8 @@ export default function AdminLoginPage() {
             <input
               type="password"
               required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               className="w-full px-4 py-2.5 bg-secondary/35 border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
               id="admin-password-input"
@@ -64,10 +100,11 @@ export default function AdminLoginPage() {
 
           <button
             type="submit"
+            disabled={loading}
             className="w-full py-3.5 bg-foreground text-background dark:bg-white dark:text-neutral-950 text-xs uppercase tracking-widest font-bold rounded-xl hover:opacity-90 transition-opacity mt-2"
             id="admin-submit-button"
           >
-            Clear Terminal
+            {loading ? 'Clearing Terminal...' : 'Clear Terminal'}
           </button>
         </form>
 

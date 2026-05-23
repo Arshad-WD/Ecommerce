@@ -20,6 +20,7 @@ export default function CartPage() {
     getShipping,
     getTotal,
     clearCart,
+    user,
   } = useShop();
 
   const [promoVal, setPromoVal] = useState('');
@@ -40,13 +41,53 @@ export default function CartPage() {
     }
   };
 
-  const handleCheckoutSimulate = () => {
+  const handleCheckoutSimulate = async () => {
     setCheckoutStep(true);
-    setTimeout(() => {
-      alert('Order Placed Successfully! Simulation completed. Your Atelier bag is now cleared.');
-      clearCart();
-      setCheckoutStep(false);
-    }, 1500);
+
+    if (localStorage.getItem('atelier_token') && user) {
+      try {
+        const { orderApi } = await import('@/lib/api');
+        
+        // Find default address or any address
+        const shippingAddress = user.addresses?.find(a => a.default || a.isDefault) || user.addresses?.[0];
+        
+        if (!shippingAddress) {
+          alert('Please add a delivery address to your account in your profile page before placing an order.');
+          setCheckoutStep(false);
+          return;
+        }
+
+        const orderData = {
+          total: getTotal(),
+          paymentMethod: 'RAZORPAY', // default value
+          shippingAddressId: shippingAddress.id,
+          items: cart.map(item => ({
+            productId: item.id,
+            quantity: item.quantity,
+          })),
+        };
+
+        const res = await orderApi.checkout(orderData);
+        if (res.success) {
+          alert('Order placed successfully! Transaction secured.');
+          await clearCart();
+        } else {
+          alert(res.message || 'Failed to place order.');
+        }
+      } catch (err) {
+        console.error('Checkout error:', err);
+        alert(err.message || 'An error occurred while finalizing transaction.');
+      } finally {
+        setCheckoutStep(false);
+      }
+    } else {
+      // Fallback guest simulator
+      setTimeout(async () => {
+        alert('Order Placed Successfully! Guest simulation completed.');
+        await clearCart();
+        setCheckoutStep(false);
+      }, 1500);
+    }
   };
 
   return (

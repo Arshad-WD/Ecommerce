@@ -4,7 +4,7 @@ import { User, ShoppingBag, Heart, MapPin, Settings, LogOut } from 'lucide-react
 import { useShop } from '@/lib/ShopContext';
 
 export default function ProfileSidebar({ activeTab, setActiveTab }) {
-  const { user } = useShop();
+  const { user, logout } = useShop();
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: User },
@@ -53,7 +53,7 @@ export default function ProfileSidebar({ activeTab, setActiveTab }) {
         
         {/* Simple visual Logout option */}
         <button
-          onClick={() => alert('Atelier Session Terminated (Demo)')}
+          onClick={logout}
           className="flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider font-bold text-neutral-400 hover:text-neutral-950 dark:hover:text-white rounded-xl shrink-0 mt-auto transition-colors"
         >
           <LogOut className="w-4 h-4 stroke-[1.5]" />

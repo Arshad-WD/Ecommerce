@@ -84,11 +84,14 @@ class ProductService {
   }
 
 
-  async getProductById(id) {
+  async getProductById(idOrSlug) {
     const product =
-      await prisma.product.findUnique({
+      await prisma.product.findFirst({
         where: {
-          id,
+          OR: [
+            { id: idOrSlug },
+            { slug: idOrSlug },
+          ],
         },
 
         include: {
