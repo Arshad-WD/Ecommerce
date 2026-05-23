@@ -3,14 +3,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Heart, ShoppingBag, User } from 'lucide-react';
+import { Heart, ShoppingBag, User, Shield } from 'lucide-react';
 import { useShop } from '@/lib/ShopContext';
 import SearchBar from '../shared/SearchBar';
 import ThemeToggle from '../shared/ThemeToggle';
 import MegaMenu from './MegaMenu';
 
 export default function Navbar() {
-  const { cart, wishlist } = useShop();
+  const { cart, wishlist, user } = useShop();
   const [activeMega, setActiveMega] = useState(null);
   const pathname = usePathname();
 
@@ -103,6 +103,17 @@ export default function Navbar() {
               </span>
             )}
           </Link>
+
+          {/* Admin Tunnel Accessor */}
+          {(user?.role === 'Admin' || user?.role === 'ADMIN') && (
+            <Link
+              href="/admin"
+              className="p-2 text-foreground/80 hover:text-foreground transition-colors hidden sm:block relative"
+              aria-label="Admin Dashboard"
+            >
+              <Shield className="w-[18px] h-[18px] stroke-[1.25]" />
+            </Link>
+          )}
 
           {/* Profile Accessor */}
           <Link

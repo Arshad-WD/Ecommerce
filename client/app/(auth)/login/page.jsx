@@ -1,16 +1,54 @@
 'use client';
 
+import { useState } from 'react';
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useShop } from '@/lib/ShopContext';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { setUser } = useShop();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    alert('Atelier Authenticated (Demo Mode). Redirecting to Dashboard.');
-    router.push('/profile');
+    try {
+      setLoading(true);
+      setError('');
+      const { authApi } = await import('@/lib/api');
+      const response = await authApi.login({ email, password });
+      
+      if (response && response.success) {
+        // Handle both mock format and live API format
+        const userData = response.user || response.data?.user;
+        const token = response.token || response.data?.accessToken;
+        
+        if (userData) {
+          // Update local storage and context state
+          localStorage.setItem('atelier_token', token);
+          localStorage.setItem('atelier_user', JSON.stringify(userData));
+          setUser(userData);
+          
+          if (userData.role === 'Admin' || userData.role === 'ADMIN') {
+            router.push('/admin');
+          } else {
+            router.push('/profile');
+          }
+        } else {
+          setError('Invalid user data received.');
+        }
+      } else {
+        setError('Invalid credentials');
+      }
+    } catch (err) {
+      setError(err.message || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -35,6 +73,7 @@ export default function LoginPage() {
 
         {/* Input Form */}
         <form onSubmit={handleLoginSubmit} className="space-y-4">
+          {error && <div className="text-xs text-red-500 font-bold uppercase tracking-wide p-2 bg-red-500/10 rounded-xl">{error}</div>}
           <div className="space-y-1">
             <label className="text-[9px] uppercase tracking-widest font-bold text-muted block">
               Email Address
@@ -42,6 +81,8 @@ export default function LoginPage() {
             <input
               type="email"
               required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="sterling@atelier.com"
               className="w-full px-4 py-2.5 bg-secondary/35 border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
               id="login-email-input"
@@ -64,6 +105,8 @@ export default function LoginPage() {
             <input
               type="password"
               required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               className="w-full px-4 py-2.5 bg-secondary/35 border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
               id="login-password-input"
@@ -72,10 +115,11 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="w-full py-3.5 bg-foreground text-background dark:bg-white dark:text-neutral-950 text-xs uppercase tracking-widest font-bold rounded-xl hover:opacity-90 transition-opacity mt-2"
+            disabled={loading}
+            className="w-full py-3.5 bg-foreground text-background dark:bg-white dark:text-neutral-950 text-xs uppercase tracking-widest font-bold rounded-xl hover:opacity-90 transition-opacity mt-2 disabled:opacity-50"
             id="login-submit-button"
           >
-            Sign In
+            {loading ? 'Authenticating...' : 'Sign In'}
           </button>
         </form>
 

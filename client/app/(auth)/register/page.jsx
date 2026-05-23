@@ -1,16 +1,53 @@
 'use client';
 
+import { useState } from 'react';
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useShop } from '@/lib/ShopContext';
+import { Loader2 } from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { setUser } = useShop();
 
-  const handleRegisterSubmit = (e) => {
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    alert('Atelier Account Created Successfully! Directing to dashboard.');
-    router.push('/profile');
+    setError('');
+
+    if (formData.password !== formData.confirmPassword) {
+      return setError('Passwords do not match');
+    }
+
+    try {
+      setLoading(true);
+      const { authApi } = await import('@/lib/api');
+      const response = await authApi.signup({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password
+      });
+
+      if (response && response.success) {
+        const userData = response.user || response.data?.user;
+        if (userData) {
+          setUser(userData);
+          localStorage.setItem('atelier_token', response.token || response.data?.accessToken || '');
+          localStorage.setItem('atelier_user', JSON.stringify(userData));
+          router.push('/profile');
+        }
+      } else {
+        setError(response.message || 'Registration failed');
+      }
+    } catch (err) {
+      setError(err.message || 'An error occurred during registration');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -35,6 +72,12 @@ export default function RegisterPage() {
 
         {/* Input Form */}
         <form onSubmit={handleRegisterSubmit} className="space-y-4">
+          {error && (
+            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-500 text-[10px] font-bold tracking-widest uppercase text-center">
+              {error}
+            </div>
+          )}
+
           <div className="space-y-1">
             <label className="text-[9px] uppercase tracking-widest font-bold text-muted block">
               Full Name
@@ -42,6 +85,8 @@ export default function RegisterPage() {
             <input
               type="text"
               required
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Alexander Vane"
               className="w-full px-4 py-2.5 bg-secondary/35 border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
               id="register-name-input"
@@ -55,6 +100,8 @@ export default function RegisterPage() {
             <input
               type="email"
               required
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               placeholder="vane@atelier.com"
               className="w-full px-4 py-2.5 bg-secondary/35 border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
               id="register-email-input"
@@ -68,6 +115,8 @@ export default function RegisterPage() {
             <input
               type="password"
               required
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               placeholder="••••••••"
               className="w-full px-4 py-2.5 bg-secondary/35 border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
               id="register-password-input"
@@ -81,6 +130,8 @@ export default function RegisterPage() {
             <input
               type="password"
               required
+              value={formData.confirmPassword}
+              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
               placeholder="••••••••"
               className="w-full px-4 py-2.5 bg-secondary/35 border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
               id="register-confirm-input"
@@ -89,10 +140,11 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            className="w-full py-3.5 bg-foreground text-background dark:bg-white dark:text-neutral-950 text-xs uppercase tracking-widest font-bold rounded-xl hover:opacity-90 transition-opacity mt-2"
+            disabled={loading}
+            className="w-full py-3.5 bg-foreground text-background dark:bg-white dark:text-neutral-950 text-xs uppercase tracking-widest font-bold rounded-xl hover:opacity-90 transition-opacity mt-2 flex items-center justify-center gap-2 disabled:opacity-70"
             id="register-submit-button"
           >
-            Create Account
+            {loading ? <Loader2 size={16} className="animate-spin" /> : 'Create Account'}
           </button>
         </form>
 

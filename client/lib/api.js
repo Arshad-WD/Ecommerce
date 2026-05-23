@@ -35,10 +35,7 @@ async function fetcher(endpoint, options = {}) {
   return response.json();
 }
 
-
-// ==========================================
 // 1. AUTHENTICATION APIs (Customer + Admin)
-// ==========================================
 export const authApi = {
   signup: async (userData) => {
     if (USE_MOCK) {
@@ -136,9 +133,7 @@ export const authApi = {
 };
 
 
-// ==========================================
 // 2. USER APIs
-// ==========================================
 export const userApi = {
   getUser: async (id) => {
     if (USE_MOCK) {
@@ -172,10 +167,7 @@ export const userApi = {
   },
 };
 
-
-// ==========================================
 // 3. PRODUCT APIs (Public & Admin)
-// ==========================================
 export const productApi = {
   // Supports filtering, search, sorting and pagination
   listProducts: async (queryParams = {}) => {
@@ -221,7 +213,11 @@ export const productApi = {
     
     // Construct query parameters string
     const query = new URLSearchParams(queryParams).toString();
-    return fetcher(`/products?${query}`);
+    const res = await fetcher(`/products?${query}`);
+    // Backend wraps: { success: true, data: { products: [...], pagination: {...} } }
+    if (res?.data?.products) return { products: res.data.products, ...res.data.pagination };
+    if (res?.products) return res;
+    return { products: Array.isArray(res) ? res : [], total: 0 };
   },
 
   getProductDetails: async (idOrSlug) => {
@@ -239,7 +235,9 @@ export const productApi = {
       await simulateNetwork(150);
       return initialCategories;
     }
-    return fetcher('/products/categories');
+    const res = await fetcher('/products/categories');
+    // Backend wraps response: { success: true, data: [...] }
+    return Array.isArray(res) ? res : (res?.data ?? []);
   },
 
   // Admin CRUD Operations
@@ -293,9 +291,7 @@ export const productApi = {
 };
 
 
-// ==========================================
 // 4. CART APIs (Customer)
-// ==========================================
 export const cartApi = {
   getCart: async () => {
     if (USE_MOCK) {
@@ -387,9 +383,7 @@ export const cartApi = {
 };
 
 
-// ==========================================
 // 5. CHECKOUT & ORDERS
-// ==========================================
 export const orderApi = {
   checkout: async (orderData) => {
     if (USE_MOCK) {
@@ -468,9 +462,7 @@ export const orderApi = {
 };
 
 
-// ==========================================
 // 6. ADMIN & ANALYTICS APIs
-// ==========================================
 export const adminApi = {
   getAdminMe: async () => {
     if (USE_MOCK) {
@@ -551,9 +543,7 @@ export const adminApi = {
 };
 
 
-// ==========================================
 // 7. INVENTORY APIs
-// ==========================================
 export const inventoryApi = {
   getInventoryStock: async () => {
     if (USE_MOCK) {

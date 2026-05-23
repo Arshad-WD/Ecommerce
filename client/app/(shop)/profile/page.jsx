@@ -5,7 +5,7 @@ import { useShop } from '@/lib/ShopContext';
 import { orders as mockOrders } from '@/lib/mock-data';
 import ProfileSidebar from '@/components/profile/ProfileSidebar';
 import OrderCard from '@/components/profile/OrderCard';
-import { User, ShoppingBag, Heart, MapPin, Settings, Plus, Trash2, Edit } from 'lucide-react';
+import { User, ShoppingBag, Heart, MapPin, Settings, Plus, Trash2, Edit, Home, Briefcase, Map } from 'lucide-react';
 import Link from 'next/link';
 import { formatCurrency } from '@/lib/utils';
 
@@ -13,16 +13,24 @@ export default function ProfilePage() {
   const { user, wishlist, cart, setUser } = useShop();
   const [activeTab, setActiveTab] = useState('overview');
 
+  // Load orders (future API integration point, currently empty for new users)
+  const orders = user.orders || [];
+
   // Address simulation state
-  const [addresses, setAddresses] = useState(user.addresses);
+  const [addresses, setAddresses] = useState(user.addresses || []);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [newAddress, setNewAddress] = useState({
-    label: '',
-    street: '',
+    fullName: '',
+    mobileNumber: '',
+    addressLine1: '',
+    addressLine2: '',
+    landmark: '',
     city: '',
     state: '',
-    zip: '',
+    postalCode: '',
     country: '',
+    addressType: 'HOME',
+    isDefault: false,
   });
 
   // Settings form state
@@ -41,19 +49,19 @@ export default function ProfilePage() {
 
   const handleAddAddress = (e) => {
     e.preventDefault();
-    if (!newAddress.street || !newAddress.city) return;
+    if (!newAddress.addressLine1 || !newAddress.city || !newAddress.fullName) return;
 
     const addressRecord = {
       id: `addr-${Date.now()}`,
       ...newAddress,
-      default: addresses.length === 0, // Default if first
+      isDefault: addresses.length === 0,
     };
 
     const updated = [...addresses, addressRecord];
     setAddresses(updated);
     setUser({ ...user, addresses: updated });
     
-    setNewAddress({ label: '', street: '', city: '', state: '', zip: '', country: '' });
+    setNewAddress({ fullName: '', mobileNumber: '', addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', postalCode: '', country: '', addressType: 'HOME', isDefault: false });
     setShowAddressForm(false);
   };
 
@@ -73,7 +81,7 @@ export default function ProfilePage() {
             <div className="grid grid-cols-3 gap-4">
               <div className="border border-border p-4 rounded-xl bg-secondary/10">
                 <span className="text-[9px] uppercase tracking-wider text-muted font-semibold block">Total Orders</span>
-                <span className="font-serif text-2xl font-bold block mt-1">{mockOrders.length}</span>
+                <span className="font-serif text-2xl font-bold block mt-1">{orders.length}</span>
               </div>
               <div className="border border-border p-4 rounded-xl bg-secondary/10">
                 <span className="text-[9px] uppercase tracking-wider text-muted font-semibold block">Wishlisted Items</span>
@@ -97,9 +105,9 @@ export default function ProfilePage() {
                 </button>
               </div>
 
-              {mockOrders.length > 0 ? (
+              {orders.length > 0 ? (
                 <div className="space-y-4">
-                  {mockOrders.slice(0, 1).map((order) => (
+                  {orders.slice(0, 2).map((order) => (
                     <OrderCard key={order.id} order={order} />
                   ))}
                 </div>
@@ -120,23 +128,30 @@ export default function ProfilePage() {
                 </button>
               </div>
 
-              {addresses.find((addr) => addr.default) ? (
-                <div className="border border-border p-5 rounded-xl bg-secondary/10 text-xs md:text-sm text-muted leading-relaxed font-medium">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="font-bold text-foreground uppercase tracking-widest text-[10px]">
-                      {addresses.find((addr) => addr.default).label}
-                    </span>
-                    <span className="px-2 py-0.5 border border-border text-foreground text-[8px] tracking-widest uppercase font-bold rounded-lg bg-background">
-                      Default
-                    </span>
+              {(addresses.find((addr) => addr.isDefault) || addresses[0]) ? (() => {
+                const primary = addresses.find((addr) => addr.isDefault) || addresses[0];
+                return (
+                  <div className="border border-border p-5 rounded-xl bg-secondary/10 text-xs md:text-sm text-muted leading-relaxed font-medium">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="font-bold text-foreground uppercase tracking-widest text-[10px]">
+                        {primary.addressType || 'ADDRESS'}
+                      </span>
+                      {primary.isDefault && (
+                        <span className="px-2 py-0.5 border border-border text-foreground text-[8px] tracking-widest uppercase font-bold rounded-lg bg-background">
+                          Default
+                        </span>
+                      )}
+                    </div>
+                    <p className="font-bold text-foreground">{primary.fullName}</p>
+                    <p>{primary.addressLine1}</p>
+                    {primary.addressLine2 && <p>{primary.addressLine2}</p>}
+                    <p>
+                      {primary.city}, {primary.state} {primary.postalCode}
+                    </p>
+                    <p>{primary.country}</p>
                   </div>
-                  <p>{addresses.find((addr) => addr.default).street}</p>
-                  <p>
-                    {addresses.find((addr) => addr.default).city}, {addresses.find((addr) => addr.default).state} {addresses.find((addr) => addr.default).zip}
-                  </p>
-                  <p>{addresses.find((addr) => addr.default).country}</p>
-                </div>
-              ) : (
+                );
+              })() : (
                 <p className="text-xs text-muted py-6">No shipping address records found.</p>
               )}
             </div>
@@ -149,9 +164,9 @@ export default function ProfilePage() {
             <h4 className="font-serif text-lg font-semibold uppercase text-foreground border-b border-border pb-3 mb-6">
               Complete Order Log
             </h4>
-            {mockOrders.length > 0 ? (
+            {orders.length > 0 ? (
               <div className="space-y-6">
-                {mockOrders.map((order) => (
+                {orders.map((order) => (
                   <OrderCard key={order.id} order={order} />
                 ))}
               </div>
@@ -189,26 +204,79 @@ export default function ProfilePage() {
                 </span>
                 
                 <div className="grid grid-cols-2 gap-4">
+                  {/* Full Name */}
+                  <div>
+                    <input
+                      type="text"
+                      required
+                      placeholder="FULL NAME..."
+                      value={newAddress.fullName}
+                      onChange={(e) => setNewAddress({ ...newAddress, fullName: e.target.value })}
+                      className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
+                    />
+                  </div>
+                  {/* Mobile Number */}
+                  <div>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="MOBILE NUMBER..."
+                      value={newAddress.mobileNumber}
+                      onChange={(e) => setNewAddress({ ...newAddress, mobileNumber: e.target.value })}
+                      className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
+                    />
+                  </div>
+                  {/* Address Type */}
+                  <div className="col-span-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2 block">Address Type</label>
+                    <div className="flex gap-3">
+                      {[
+                        { id: 'HOME', label: 'Home', icon: Home },
+                        { id: 'WORK', label: 'Work', icon: Briefcase },
+                        { id: 'OTHER', label: 'Other', icon: Map }
+                      ].map((type) => {
+                        const Icon = type.icon;
+                        const isSelected = newAddress.addressType === type.id;
+                        return (
+                          <button
+                            key={type.id}
+                            type="button"
+                            onClick={() => setNewAddress({ ...newAddress, addressType: type.id })}
+                            className={`flex flex-1 items-center justify-center gap-2 py-3 px-4 rounded-xl border text-xs font-bold tracking-widest uppercase transition-all ${
+                              isSelected
+                                ? 'bg-foreground text-background border-foreground'
+                                : 'bg-background border-border text-muted hover:border-foreground/50 hover:text-foreground'
+                            }`}
+                          >
+                            <Icon size={14} strokeWidth={isSelected ? 2.5 : 2} />
+                            {type.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {/* Address Line 1 */}
                   <div className="col-span-2">
                     <input
                       type="text"
                       required
-                      placeholder="ADDRESS DESCRIPTION (E.G. HOME, WORK)..."
-                      value={newAddress.label}
-                      onChange={(e) => setNewAddress({ ...newAddress, label: e.target.value })}
+                      placeholder="ADDRESS LINE 1 (STREET, BUILDING)..."
+                      value={newAddress.addressLine1}
+                      onChange={(e) => setNewAddress({ ...newAddress, addressLine1: e.target.value })}
                       className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
                     />
                   </div>
+                  {/* Address Line 2 */}
                   <div className="col-span-2">
                     <input
                       type="text"
-                      required
-                      placeholder="STREET RESIDENCE..."
-                      value={newAddress.street}
-                      onChange={(e) => setNewAddress({ ...newAddress, street: e.target.value })}
+                      placeholder="ADDRESS LINE 2 (OPTIONAL)..."
+                      value={newAddress.addressLine2}
+                      onChange={(e) => setNewAddress({ ...newAddress, addressLine2: e.target.value })}
                       className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
                     />
                   </div>
+                  {/* City */}
                   <div>
                     <input
                       type="text"
@@ -219,6 +287,7 @@ export default function ProfilePage() {
                       className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
                     />
                   </div>
+                  {/* State */}
                   <div>
                     <input
                       type="text"
@@ -229,16 +298,18 @@ export default function ProfilePage() {
                       className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
                     />
                   </div>
+                  {/* Postal Code */}
                   <div>
                     <input
                       type="text"
                       required
-                      placeholder="ZIP..."
-                      value={newAddress.zip}
-                      onChange={(e) => setNewAddress({ ...newAddress, zip: e.target.value })}
+                      placeholder="POSTAL CODE..."
+                      value={newAddress.postalCode}
+                      onChange={(e) => setNewAddress({ ...newAddress, postalCode: e.target.value })}
                       className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
                     />
                   </div>
+                  {/* Country */}
                   <div>
                     <input
                       type="text"
@@ -271,26 +342,31 @@ export default function ProfilePage() {
 
             {/* List addresses */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {addresses.map((addr) => (
+              {addresses.map((addr) => {
+                const TypeIcon = addr.addressType === 'HOME' ? Home : addr.addressType === 'WORK' ? Briefcase : Map;
+                return (
                 <div
                   key={addr.id}
                   className="border border-border p-5 rounded-xl bg-background hover:border-foreground/30 transition-all flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex justify-between items-start mb-3">
-                      <span className="font-bold text-foreground uppercase tracking-widest text-[10px]">
-                        {addr.label}
+                      <span className="font-bold text-foreground uppercase tracking-widest text-[10px] flex items-center gap-1.5">
+                        <TypeIcon size={12} strokeWidth={2.5} />
+                        {addr.addressType || 'ADDRESS'}
                       </span>
-                      {addr.default && (
+                      {addr.isDefault && (
                         <span className="px-2 py-0.5 border border-border text-foreground text-[8px] tracking-widest uppercase font-bold rounded-lg bg-secondary">
                           Default
                         </span>
                       )}
                     </div>
                     <div className="text-xs text-muted leading-relaxed font-sans font-medium space-y-0.5">
-                      <p>{addr.street}</p>
+                      <p className="font-bold text-foreground mb-1">{addr.fullName} <span className="text-muted font-normal text-[10px] ml-1">{addr.mobileNumber}</span></p>
+                      <p>{addr.addressLine1}</p>
+                      {addr.addressLine2 && <p>{addr.addressLine2}</p>}
                       <p>
-                        {addr.city}, {addr.state} {addr.zip}
+                        {addr.city}, {addr.state} {addr.postalCode}
                       </p>
                       <p>{addr.country}</p>
                     </div>
@@ -310,7 +386,8 @@ export default function ProfilePage() {
                     </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         );
@@ -331,7 +408,7 @@ export default function ProfilePage() {
                   required
                   value={settingsForm.name}
                   onChange={(e) => setSettingsForm({ ...settingsForm, name: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-secondary/35 border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase transition-colors"
                   id="profile-name-input"
                 />
               </div>
@@ -345,7 +422,7 @@ export default function ProfilePage() {
                   required
                   value={settingsForm.email}
                   onChange={(e) => setSettingsForm({ ...settingsForm, email: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-secondary/35 border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase transition-colors"
                   id="profile-email-input"
                 />
               </div>
@@ -357,7 +434,7 @@ export default function ProfilePage() {
                 <input
                   type="password"
                   placeholder="••••••••"
-                  className="w-full px-4 py-2.5 bg-secondary/35 border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase transition-colors"
                 />
               </div>
 

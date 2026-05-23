@@ -13,11 +13,12 @@ export function ShopProvider({ children }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [user, setUser] = useState(mockUsers[0]);
 
-  // Load cart and wishlist from localStorage on mount
+  // Load cart, wishlist, and user from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedCart = localStorage.getItem('atelier_cart');
       const storedWishlist = localStorage.getItem('atelier_wishlist');
+      const storedUser = localStorage.getItem('atelier_user');
       
       if (storedCart) {
         try {
@@ -32,6 +33,14 @@ export function ShopProvider({ children }) {
           setWishlist(JSON.parse(storedWishlist));
         } catch (e) {
           console.error('Error loading wishlist', e);
+        }
+      }
+
+      if (storedUser) {
+        try {
+          setUser(JSON.parse(storedUser));
+        } catch (e) {
+          console.error('Error loading user session', e);
         }
       }
     }
