@@ -17,72 +17,74 @@ export function ShopProvider({ children }) {
   const [discountPercent, setDiscountPercent] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [sessionLoading, setSessionLoading] = useState(true);
 
-  // On mount: restore cart/wishlist from localStorage, then VERIFY the session
-  // token against the backend before trusting it. Stale tokens are purged.
+  // Load cart, wishlist and user session on mount
   useEffect(() => {
-    const initSession = async () => {
-      try {
-        const storedCart = localStorage.getItem('atelier_cart');
-        const storedWishlist = localStorage.getItem('atelier_wishlist');
-        const storedToken = localStorage.getItem('atelier_token');
-
-        if (storedCart) {
-          try { setCart(JSON.parse(storedCart)); } catch (e) { /* ignore */ }
+    if (typeof window !== 'undefined') {
+      const storedCart = localStorage.getItem('atelier_cart');
+      const storedWishlist = localStorage.getItem('atelier_wishlist');
+      
+      if (storedCart) {
+        try {
+          setCart(JSON.parse(storedCart));
+        } catch (e) {
+          console.error('Error loading cart', e);
         }
-        if (storedWishlist) {
-          try { setWishlist(JSON.parse(storedWishlist)); } catch (e) { /* ignore */ }
-        }
-
-        // Only attempt session restore if a token exists
-        if (storedToken) {
-          try {
-            const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-            const res = await fetch(`${API_BASE}/auth/me`, {
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${storedToken}`,
-                'Content-Type': 'application/json',
-              },
-              credentials: 'include',
-            });
-
-            if (res.ok) {
-              const data = await res.json();
-              // Accept both {data: user} and flat user response shapes
-              const verifiedUser = data?.data || data;
-              if (verifiedUser && verifiedUser.id) {
-                // Token is valid — sync localStorage with fresh server data
-                localStorage.setItem('atelier_user', JSON.stringify(verifiedUser));
-                setUser(verifiedUser);
-              } else {
-                // Unexpected response shape — treat as invalid
-                clearAuthStorage();
-              }
-            } else {
-              // 401 or any other error — token is invalid/expired, purge it
-              console.warn('Session token invalid, clearing auth data.');
-              clearAuthStorage();
-            }
-          } catch (networkError) {
-            // Backend unreachable — fail safe: do NOT trust localStorage user
-            console.warn('Could not verify session with backend:', networkError.message);
-            clearAuthStorage();
-          }
-        } else {
-          // No token at all — ensure user data is also cleared (defensive)
-          localStorage.removeItem('atelier_user');
-        }
-      } catch (e) {
-        console.error('Session init error:', e);
-        clearAuthStorage();
-      } finally {
-        setLoading(false);
       }
-    };
+      
+      if (storedWishlist) {
+        try {
+          setWishlist(JSON.parse(storedWishlist));
+        } catch (e) {
+          console.error('Error loading wishlist', e);
+        }
+      }
 
-    initSession();
+      // Check if user is logged in via token
+      const token = localStorage.getItem('atelier_token');
+      if (token) {
+        import('./api').then(({ authApi, cartApi }) => {
+          authApi.getMe()
+            .then((userData) => {
+              setUser(userData);
+              // Fetch user's cart from backend and sync it!
+              cartApi.getCart().then((res) => {
+                if (res.success && res.data) {
+                  const mappedCart = res.data.items.map(item => ({
+                    cartItemId: item.id,
+                    id: item.productId,
+                    name: item.product.name,
+                    slug: item.product.slug,
+                    price: item.product.discountPrice ? Number(item.product.discountPrice) : Number(item.product.price),
+                    originalPrice: Number(item.product.price),
+                    size: 'M', // Fallback since db cart doesn't save size
+                    color: 'Black', // Fallback since db cart doesn't save color
+                    quantity: item.quantity,
+                    image: item.product.images && item.product.images.length > 0 ? item.product.images[0].imageUrl : '',
+                    category: item.product.categoryId
+                  }));
+                  setCart(mappedCart);
+                  localStorage.setItem('atelier_cart', JSON.stringify(mappedCart));
+                }
+              }).catch(err => console.error('Error syncing cart on mount:', err));
+            })
+            .catch((e) => {
+              console.error('Session restored fail:', e);
+              localStorage.removeItem('atelier_token');
+              localStorage.removeItem('atelier_user');
+              localStorage.removeItem('atelier_refresh_token');
+              setUser(null);
+            })
+            .finally(() => {
+              setSessionLoading(false);
+            });
+        });
+      } else {
+        setUser(null);
+        setSessionLoading(false);
+      }
+    }
   }, []);
 
   // Save cart changes to localStorage
@@ -97,50 +99,141 @@ export function ShopProvider({ children }) {
     localStorage.setItem('atelier_wishlist', JSON.stringify(newWishlist));
   };
 
+  // User Actions
+  const login = async (email, password) => {
+    try {
+      const { authApi, cartApi } = await import('./api');
+      const res = await authApi.login({ email, password });
+      if (res.success && res.user) {
+        setUser(res.user);
+        // Fetch backend cart on login
+        try {
+          const cartRes = await cartApi.getCart();
+          if (cartRes.success && cartRes.data) {
+            const mappedCart = cartRes.data.items.map(item => ({
+              cartItemId: item.id,
+              id: item.productId,
+              name: item.product.name,
+              slug: item.product.slug,
+              price: item.product.discountPrice ? Number(item.product.discountPrice) : Number(item.product.price),
+              originalPrice: Number(item.product.price),
+              size: 'M',
+              color: 'Black',
+              quantity: item.quantity,
+              image: item.product.images && item.product.images.length > 0 ? item.product.images[0].imageUrl : '',
+              category: item.product.categoryId
+            }));
+            setCart(mappedCart);
+            localStorage.setItem('atelier_cart', JSON.stringify(mappedCart));
+          }
+        } catch (e) {
+          console.error('Sync cart error on login:', e);
+        }
+        return { success: true };
+      }
+      return res;
+    } catch (error) {
+      return { success: false, message: error.message || 'Invalid email or password.' };
+    }
+  };
+
+  const signup = async (name, email, password) => {
+    try {
+      const { authApi } = await import('./api');
+      const res = await authApi.signup({ name, email, password });
+      if (res.success && res.user) {
+        setUser(res.user);
+        setCart([]);
+        localStorage.setItem('atelier_cart', JSON.stringify([]));
+        return { success: true };
+      }
+      return res;
+    } catch (error) {
+      return { success: false, message: error.message || 'Registration failed.' };
+    }
+  };
+
+  const logout = async () => {
+    const { authApi } = await import('./api');
+    await authApi.logout();
+    setUser(null);
+    setCart([]);
+    localStorage.removeItem('atelier_cart');
+  };
+
   // Add item to cart
-  const addToCart = (product, size, color, quantity = 1) => {
+  const addToCart = async (product, size, color, quantity = 1) => {
     const existingIndex = cart.findIndex(
       (item) => item.id === product.id && item.size === size && item.color === color
     );
 
+    let updatedCart = [...cart];
     if (existingIndex > -1) {
-      const updatedCart = [...cart];
       updatedCart[existingIndex].quantity += quantity;
-      saveCart(updatedCart);
     } else {
       const cartItem = {
         cartItemId: `${product.id}-${size}-${color}-${Date.now()}`,
         id: product.id,
         name: product.name,
         slug: product.slug,
-        price: product.discountPrice || product.price,
-        originalPrice: product.price,
+        price: product.discountPrice ? Number(product.discountPrice) : Number(product.price),
+        originalPrice: Number(product.price),
         size,
         color,
         quantity,
-        image: product.images[0],
+        image: product.images ? (typeof product.images[0] === 'string' ? product.images[0] : (product.images[0]?.imageUrl || product.images[0]?.url)) : '',
         category: product.category,
       };
-      saveCart([...cart, cartItem]);
+      updatedCart.push(cartItem);
+    }
+    saveCart(updatedCart);
+
+    if (localStorage.getItem('atelier_token')) {
+      try {
+        const { cartApi } = await import('./api');
+        await cartApi.addToCart(product.id, size, color, quantity);
+      } catch (e) {
+        console.error('Add item to backend cart fail:', e);
+      }
     }
   };
 
   // Remove item from cart
-  const removeFromCart = (cartItemId) => {
-    const updatedCart = cart.filter((item) => item.cartItemId !== cartItemId);
+  const removeFromCart = async (cartItemId) => {
+    const itemToRemove = cart.find(item => item.cartItemId === cartItemId || item.id === cartItemId);
+    const updatedCart = cart.filter((item) => item.cartItemId !== cartItemId && item.id !== cartItemId);
     saveCart(updatedCart);
+
+    if (localStorage.getItem('atelier_token') && itemToRemove) {
+      try {
+        const { cartApi } = await import('./api');
+        await cartApi.removeFromCart(itemToRemove.id);
+      } catch (e) {
+        console.error('Remove item from backend cart fail:', e);
+      }
+    }
   };
 
   // Update item quantity
-  const updateCartQuantity = (cartItemId, quantity) => {
+  const updateCartQuantity = async (cartItemId, quantity) => {
     if (quantity <= 0) {
       removeFromCart(cartItemId);
       return;
     }
+    const itemToUpdate = cart.find(item => item.cartItemId === cartItemId || item.id === cartItemId);
     const updatedCart = cart.map((item) =>
-      item.cartItemId === cartItemId ? { ...item, quantity } : item
+      (item.cartItemId === cartItemId || item.id === cartItemId) ? { ...item, quantity } : item
     );
     saveCart(updatedCart);
+
+    if (localStorage.getItem('atelier_token') && itemToUpdate) {
+      try {
+        const { cartApi } = await import('./api');
+        await cartApi.updateCartItemQty(itemToUpdate.id, quantity);
+      } catch (e) {
+        console.error('Update item qty in backend cart fail:', e);
+      }
+    }
   };
 
   // Toggle items in wishlist
@@ -194,9 +287,17 @@ export function ShopProvider({ children }) {
   };
 
   // Clear cart on checkout simulator
-  const clearCart = () => {
+  const clearCart = async () => {
     saveCart([]);
     removeCoupon();
+    if (localStorage.getItem('atelier_token')) {
+      try {
+        const { cartApi } = await import('./api');
+        await cartApi.clearCart();
+      } catch (e) {
+        console.error('Clear backend cart fail:', e);
+      }
+    }
   };
 
   return (
@@ -205,7 +306,11 @@ export function ShopProvider({ children }) {
         cart,
         wishlist,
         user,
+<<<<<<< HEAD
         loading,
+=======
+        sessionLoading,
+>>>>>>> tauqeer
         couponCode,
         discountPercent,
         searchQuery,
@@ -222,6 +327,9 @@ export function ShopProvider({ children }) {
         getTotal,
         clearCart,
         setUser,
+        login,
+        signup,
+        logout,
       }}
     >
       {children}

@@ -5,6 +5,7 @@ import { Trash2, ShoppingBag, ArrowRight, Minus, Plus, Ticket, HelpCircle } from
 import Link from 'next/link';
 import { formatCurrency } from '@/lib/utils';
 import { useState } from 'react';
+import Toast from '@/components/shared/Toast';
 
 export default function CartPage() {
   const {
@@ -20,11 +21,13 @@ export default function CartPage() {
     getShipping,
     getTotal,
     clearCart,
+    user,
   } = useShop();
 
   const [promoVal, setPromoVal] = useState('');
   const [promoError, setPromoError] = useState('');
   const [checkoutStep, setCheckoutStep] = useState(false);
+  const [toast, setToast] = useState({ message: '', type: 'success' });
 
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
@@ -40,13 +43,53 @@ export default function CartPage() {
     }
   };
 
-  const handleCheckoutSimulate = () => {
+  const handleCheckoutSimulate = async () => {
     setCheckoutStep(true);
-    setTimeout(() => {
-      alert('Order Placed Successfully! Simulation completed. Your Atelier bag is now cleared.');
-      clearCart();
-      setCheckoutStep(false);
-    }, 1500);
+
+    if (localStorage.getItem('atelier_token') && user) {
+      try {
+        const { orderApi } = await import('@/lib/api');
+        
+        // Find default address or any address
+        const shippingAddress = user.addresses?.find(a => a.default || a.isDefault) || user.addresses?.[0];
+        
+        if (!shippingAddress) {
+          setToast({ message: 'Please add a delivery address to your account in your profile page before placing an order.', type: 'error' });
+          setCheckoutStep(false);
+          return;
+        }
+
+        const orderData = {
+          total: getTotal(),
+          paymentMethod: 'RAZORPAY', // default value
+          shippingAddressId: shippingAddress.id,
+          items: cart.map(item => ({
+            productId: item.id,
+            quantity: item.quantity,
+          })),
+        };
+
+        const res = await orderApi.checkout(orderData);
+        if (res.success) {
+          setToast({ message: 'Order placed successfully! Transaction secured.', type: 'success' });
+          await clearCart();
+        } else {
+          setToast({ message: res.message || 'Failed to place order.', type: 'error' });
+        }
+      } catch (err) {
+        console.error('Checkout error:', err);
+        setToast({ message: err.message || 'An error occurred while finalizing transaction.', type: 'error' });
+      } finally {
+        setCheckoutStep(false);
+      }
+    } else {
+      // Fallback guest simulator
+      setTimeout(async () => {
+        setToast({ message: 'Order Placed Successfully! Guest simulation completed.', type: 'success' });
+        await clearCart();
+        setCheckoutStep(false);
+      }, 1500);
+    }
   };
 
   return (
@@ -287,6 +330,12 @@ export default function CartPage() {
         </div>
       )}
 
-    </div>
-  );
+    {/* Reusable Toast Notifications */}
+    <Toast 
+      message={toast.message} 
+      type={toast.type} 
+      onClose={() => setToast({ message: '', type: 'success' })} 
+    />
+  </div>
+);
 }

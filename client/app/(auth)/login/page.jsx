@@ -5,47 +5,32 @@ import AuthSplitLayout from '@/components/auth/AuthSplitLayout';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useShop } from '@/lib/ShopContext';
+import Toast from '@/components/shared/Toast';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { setUser } = useShop();
+  const { login } = useShop();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [toast, setToast] = useState({ message: '', type: 'success' });
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
+
     try {
-      setLoading(true);
-      setError('');
-      const { authApi } = await import('@/lib/api');
-      const response = await authApi.login({ email, password });
-      
-      if (response && response.success) {
-        // Handle both mock format and live API format
-        const userData = response.user || response.data?.user;
-        const token = response.token || response.data?.accessToken;
-        
-        if (userData) {
-          // Update local storage and context state
-          localStorage.setItem('atelier_token', token);
-          localStorage.setItem('atelier_user', JSON.stringify(userData));
-          setUser(userData);
-          
-          if (userData.role === 'Admin' || userData.role === 'ADMIN') {
-            router.push('/admin');
-          } else {
-            router.push('/profile');
-          }
-        } else {
-          setError('Invalid user data received.');
-        }
+      const res = await login(email, password);
+      if (res.success) {
+        router.push('/profile');
       } else {
-        setError('Invalid credentials');
+        setError(res.message || 'Invalid email or password. Please try again.');
       }
     } catch (err) {
-      setError(err.message || 'Login failed');
+      console.error(err);
+      setError('An error occurred during authentication. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -70,6 +55,13 @@ export default function LoginPage() {
             Enter your credentials to access your bespoke dashboard.
           </p>
         </div>
+
+        {/* Premium Error Alert */}
+        {error && (
+          <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-600 rounded-xl text-xs font-semibold tracking-wide uppercase">
+            {error}
+          </div>
+        )}
 
         {/* Input Form */}
         <form onSubmit={handleLoginSubmit} className="space-y-4">
@@ -96,7 +88,7 @@ export default function LoginPage() {
               </label>
               <button
                 type="button"
-                onClick={() => alert('Demo Mode: Password resets disabled.')}
+                onClick={() => setToast({ message: 'Demo Mode: Password resets are disabled.', type: 'error' })}
                 className="text-[9px] uppercase tracking-widest text-muted hover:text-foreground font-bold underline"
               >
                 Forgot?
@@ -116,7 +108,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 bg-foreground text-background dark:bg-white dark:text-neutral-950 text-xs uppercase tracking-widest font-bold rounded-xl hover:opacity-90 transition-opacity mt-2 disabled:opacity-50"
+            className="w-full py-3.5 bg-foreground text-background dark:bg-white dark:text-neutral-950 text-xs uppercase tracking-widest font-bold rounded-xl hover:opacity-90 transition-opacity mt-2 flex items-center justify-center gap-2"
             id="login-submit-button"
           >
             {loading ? 'Authenticating...' : 'Sign In'}
@@ -137,8 +129,8 @@ export default function LoginPage() {
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => {
-              alert('Redirecting to Google authenticator...');
-              router.push('/profile');
+              setToast({ message: 'Redirecting to Google authenticator...', type: 'success' });
+              setTimeout(() => router.push('/profile'), 1500);
             }}
             className="py-3 border border-border rounded-xl text-[10px] font-bold tracking-widest uppercase hover:bg-secondary transition-colors"
           >
@@ -146,8 +138,8 @@ export default function LoginPage() {
           </button>
           <button
             onClick={() => {
-              alert('Redirecting to Apple ID authenticator...');
-              router.push('/profile');
+              setToast({ message: 'Redirecting to Apple ID authenticator...', type: 'success' });
+              setTimeout(() => router.push('/profile'), 1500);
             }}
             className="py-3 border border-border rounded-xl text-[10px] font-bold tracking-widest uppercase hover:bg-secondary transition-colors"
           >
@@ -163,6 +155,13 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
+
+      {/* Reusable Toast Notifications */}
+      <Toast 
+        message={toast.message} 
+        type={toast.type} 
+        onClose={() => setToast({ message: '', type: 'success' })} 
+      />
     </AuthSplitLayout>
   );
 }

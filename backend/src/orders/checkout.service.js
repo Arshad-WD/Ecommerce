@@ -71,7 +71,7 @@ class CheckoutService {
                 billingAddressId:
                   shippingAddress.id,
 
-                status: OrderStatus.PENDING,
+                status: OrderStatus.PROCESSING,
 
                 paymentStatus:
                   OrderStatus.PENDING,
@@ -129,11 +129,13 @@ class CheckoutService {
 
               provider: 'RAZORPAY',
 
+              transactionId: 'TXN-' + Date.now() + '-' + Math.floor(Math.random() * 10000),
+
               amount: totalAmount,
 
               currency: 'INR',
 
-              status: OrderStatus.PENDING,
+              status: 'PENDING',
             },
           });
 

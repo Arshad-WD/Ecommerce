@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { products, categories } from '@/lib/mock-data';
 import ProductGrid from '@/components/products/ProductGrid';
 import { SlidersHorizontal, ArrowDownAZ, X } from 'lucide-react';
 
@@ -20,7 +19,9 @@ function ProductsContent() {
   const [selectedColor, setSelectedColor] = useState('');
   const [sortBy, setSortBy] = useState('featured');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [filteredProducts, setFilteredProducts] = useState(products);
+  const [productsList, setProductsList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [categoriesList, setCategoriesList] = useState([]);
   const [searchVal, setSearchVal] = useState(urlSearch);
 
   // Sync state with URL params
@@ -32,52 +33,49 @@ function ProductsContent() {
     setSearchVal(urlSearch);
   }, [urlSearch]);
 
+  // Fetch categories on mount
+  useEffect(() => {
+    import('@/lib/api').then(({ productApi }) => {
+      productApi.listCategories().then(cats => {
+        setCategoriesList(cats || []);
+      });
+    });
+  }, []);
+
+  // 3. Dynamic Fetching based on core backend parameters
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    import('@/lib/api').then(({ productApi }) => {
+      productApi.listProducts({
+        search: searchVal,
+        category: selectedCategory,
+        sort: sortBy,
+        limit: 100
+      }).then((res) => {
+        if (active) {
+          setProductsList(res.products || []);
+          setLoading(false);
+        }
+      }).catch((err) => {
+        console.error(err);
+        if (active) setLoading(false);
+      });
+    });
+    return () => { active = false; };
+  }, [selectedCategory, searchVal, sortBy]);
+
   // All sizes available in luxury store
   const allSizes = ['XS', 'S', 'M', 'L', 'XL', '28', '30', '32', '34', '36'];
   // All neutral colors in store
   const allColors = ['Black', 'Off-White', 'Cream', 'Charcoal'];
 
-  // 3. Filtering and Sorting Calculations
-  useEffect(() => {
-    let result = [...products];
-
-    // Filter by Category
-    if (selectedCategory) {
-      result = result.filter((prod) => prod.category === selectedCategory);
-    }
-
-    // Filter by Search Keystrokes
-    if (searchVal) {
-      result = result.filter(
-        (prod) =>
-          prod.name.toLowerCase().includes(searchVal.toLowerCase()) ||
-          prod.description.toLowerCase().includes(searchVal.toLowerCase())
-      );
-    }
-
-    // Filter by Size Selection
-    if (selectedSize) {
-      result = result.filter((prod) => prod.sizes.includes(selectedSize));
-    }
-
-    // Filter by Color Selection
-    if (selectedColor) {
-      result = result.filter((prod) => prod.colors.includes(selectedColor));
-    }
-
-    // Apply Sorting
-    if (sortBy === 'price-low') {
-      result.sort((a, b) => (a.discountPrice || a.price) - (b.discountPrice || b.price));
-    } else if (sortBy === 'price-high') {
-      result.sort((a, b) => (b.discountPrice || b.price) - (a.discountPrice || a.price));
-    } else if (sortBy === 'rating') {
-      result.sort((a, b) => b.rating - a.rating);
-    } else if (sortBy === 'featured') {
-      result.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
-    }
-
-    setFilteredProducts(result);
-  }, [selectedCategory, searchVal, selectedSize, selectedColor, sortBy]);
+  // Apply frontend-specific filters (Size, Color)
+  const filteredProducts = productsList.filter((prod) => {
+    if (selectedSize && !prod.sizes.includes(selectedSize)) return false;
+    if (selectedColor && !prod.colors.includes(selectedColor)) return false;
+    return true;
+  });
 
   const clearFilters = () => {
     setSelectedCategory('');
@@ -150,7 +148,7 @@ function ProductsContent() {
           <div className="space-y-3">
             <h4 className="text-[10px] tracking-wider uppercase font-bold text-muted">Categories</h4>
             <ul className="space-y-2 text-xs font-semibold">
-              {categories.map((cat) => (
+              {categoriesList.map((cat) => (
                 <li key={cat.id}>
                   <button
                     onClick={() => handleCategorySelect(cat.slug)}
@@ -232,7 +230,7 @@ function ProductsContent() {
             </button>
 
             <span className="hidden lg:inline text-xs text-muted font-medium">
-              Showing {filteredProducts.length} of {products.length} Garments
+              Showing {filteredProducts.length} of {productsList.length} Garments
             </span>
 
             {/* Sorting Selection Dropdown */}
@@ -253,7 +251,23 @@ function ProductsContent() {
           </div>
 
           {/* Product Items Display Grid */}
-          <ProductGrid products={filteredProducts} />
+          {loading ? (
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="space-y-4">
+                  <div className="aspect-[3/4] bg-neutral-200 dark:bg-neutral-800 rounded-xl" />
+                  <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-2/3" />
+                  <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-1/3" />
+                </div>
+              ))}
+            </div>
+          ) : filteredProducts.length > 0 ? (
+            <ProductGrid products={filteredProducts} />
+          ) : (
+            <div className="text-center py-20 font-serif text-lg italic text-muted border border-dashed border-border rounded-xl">
+              No garments found matching the active filters.
+            </div>
+          )}
 
         </div>
       </div>
@@ -283,7 +297,7 @@ function ProductsContent() {
             <div className="space-y-3">
               <h4 className="text-[10px] tracking-wider uppercase font-bold text-muted">Categories</h4>
               <div className="grid grid-cols-2 gap-2">
-                {categories.map((cat) => (
+                {categoriesList.map((cat) => (
                   <button
                     key={cat.id}
                     onClick={() => {

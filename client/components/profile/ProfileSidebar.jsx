@@ -4,7 +4,7 @@ import { User, ShoppingBag, Heart, MapPin, Settings, LogOut } from 'lucide-react
 import { useShop } from '@/lib/ShopContext';
 
 export default function ProfileSidebar({ activeTab, setActiveTab }) {
-  const { user, setUser } = useShop();
+  const { user, logout } = useShop();
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: User },
@@ -51,26 +51,13 @@ export default function ProfileSidebar({ activeTab, setActiveTab }) {
           );
         })}
         
-      {/* Working Logout option */}
-      <button
-        onClick={async () => {
-          try {
-            const { authApi } = await import('@/lib/api');
-            await authApi.logout();
-          } catch (err) {
-            console.error('Logout failed', err);
-          } finally {
-            setUser(null);
-            if (typeof window !== 'undefined') {
-              window.location.href = '/login';
-            }
-          }
-        }}
-        className="flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider font-bold text-neutral-400 hover:text-neutral-950 dark:hover:text-white rounded-xl shrink-0 mt-auto transition-colors"
-      >
-        <LogOut className="w-4 h-4 stroke-[1.5]" />
-        Logout
-      </button>
+        <button
+          onClick={logout}
+          className="flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider font-bold text-neutral-400 hover:text-neutral-950 dark:hover:text-white rounded-xl shrink-0 mt-auto transition-colors"
+        >
+          <LogOut className="w-4 h-4 stroke-[1.5]" />
+          Logout
+        </button>
       </nav>
     </aside>
   );

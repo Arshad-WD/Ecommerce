@@ -1,19 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useShop } from '@/lib/ShopContext';
-import { orders as mockOrders } from '@/lib/mock-data';
 import ProfileSidebar from '@/components/profile/ProfileSidebar';
 import OrderCard from '@/components/profile/OrderCard';
-import { User, ShoppingBag, Heart, MapPin, Settings, Plus, Trash2, Edit, Home, Briefcase, Map } from 'lucide-react';
+import { Plus, Trash2, Edit, Home, Briefcase, Map } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import Toast from '@/components/shared/Toast';
 import { formatCurrency } from '@/lib/utils';
 
 export default function ProfilePage() {
-  const { user, wishlist, cart, setUser, loading } = useShop();
-  const [activeTab, setActiveTab] = useState('overview');
   const router = useRouter();
+  const { user, sessionLoading, wishlist, cart, setUser } = useShop();
+  const [activeTab, setActiveTab] = useState('overview');
+  const [ordersList, setOrdersList] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [toast, setToast] = useState({ message: '', type: 'success' });
+  const [editingAddressId, setEditingAddressId] = useState(null);
 
   // Address simulation state
   const [addresses, setAddresses] = useState([]);
@@ -38,6 +42,14 @@ export default function ProfilePage() {
     email: '',
   });
 
+  // Protect route
+  useEffect(() => {
+    if (!sessionLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, sessionLoading, router]);
+
+  // Sync user values once loaded
   useEffect(() => {
     if (user) {
       setAddresses(user.addresses || []);
@@ -45,63 +57,212 @@ export default function ProfilePage() {
         name: user.name || '',
         email: user.email || '',
       });
+
+      // Fetch live order histories from backend
+      setLoadingOrders(true);
+      import('@/lib/api').then(({ orderApi }) => {
+        orderApi.ordersHistory().then((res) => {
+          if (res.success && res.data) {
+            setOrdersList(res.data);
+          }
+        }).catch(err => console.error(err))
+        .finally(() => setLoadingOrders(false));
+      });
     }
   }, [user]);
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace('/login');
-    }
-  }, [user, loading, router]);
-
-  if (loading) {
+  if (sessionLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="font-serif text-sm tracking-widest text-muted uppercase animate-pulse">
-          Loading Bespoke Suite...
-        </div>
+      <div className="max-w-7xl mx-auto px-4 py-32 text-center font-serif text-lg italic text-muted animate-pulse">
+        Loading Atelier Account...
       </div>
     );
   }
 
-  if (!user) {
-    return null;
-  }
-
-  // Load orders (future API integration point, currently empty for new users)
-  const orders = user.orders || [];
+  if (!user) return null;
 
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
-  const handleSaveSettings = (e) => {
+  const handleSaveSettings = async (e) => {
     e.preventDefault();
-    setUser({ ...user, name: settingsForm.name, email: settingsForm.email });
-    alert('Account settings updated successfully.');
+    try {
+      const { userApi } = await import('@/lib/api');
+      const res = await userApi.updateUser(user.id, {
+        name: settingsForm.name,
+        email: settingsForm.email,
+      });
+      if (res.success && res.user) {
+        setUser(res.user);
+        localStorage.setItem('atelier_user', JSON.stringify(res.user));
+        setToast({ message: 'Account settings updated successfully.', type: 'success' });
+      } else {
+        setToast({ message: res.message || 'Failed to update settings.', type: 'error' });
+      }
+    } catch (err) {
+      console.error(err);
+      setToast({ message: 'An error occurred while updating settings.', type: 'error' });
+    }
   };
 
-  const handleAddAddress = (e) => {
+  const handleAddAddress = async (e) => {
     e.preventDefault();
     if (!newAddress.addressLine1 || !newAddress.city || !newAddress.fullName) return;
 
-    const addressRecord = {
-      id: `addr-${Date.now()}`,
-      ...newAddress,
-      isDefault: addresses.length === 0,
-    };
+    try {
+      const { addressApi } = await import('@/lib/api');
+      if (editingAddressId) {
+        const res = await addressApi.updateAddress(editingAddressId, {
+          fullName: newAddress.fullName,
+          mobileNumber: newAddress.mobileNumber,
+          addressLine1: newAddress.addressLine1,
+          addressLine2: newAddress.addressLine2 || null,
+          landmark: newAddress.landmark || null,
+          city: newAddress.city,
+          state: newAddress.state,
+          country: newAddress.country,
+          postalCode: newAddress.postalCode,
+          addressType: newAddress.addressType || 'HOME',
+          isDefault: newAddress.isDefault,
+        });
 
-    const updated = [...addresses, addressRecord];
-    setAddresses(updated);
-    setUser({ ...user, addresses: updated });
-    
-    setNewAddress({ fullName: '', mobileNumber: '', addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', postalCode: '', country: '', addressType: 'HOME', isDefault: false });
-    setShowAddressForm(false);
+        if (res.success) {
+          const updated = addresses.map(addr => addr.id === editingAddressId ? { ...addr, ...newAddress, id: editingAddressId } : addr);
+          setAddresses(updated);
+          setUser({ ...user, addresses: updated });
+          localStorage.setItem('atelier_user', JSON.stringify({ ...user, addresses: updated }));
+          
+          setNewAddress({ fullName: '', mobileNumber: '', addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', postalCode: '', country: '', addressType: 'HOME', isDefault: false });
+          setEditingAddressId(null);
+          setShowAddressForm(false);
+          setToast({ message: 'Address successfully updated in your profile.', type: 'success' });
+        } else {
+          setToast({ message: res.message || 'Failed to update address.', type: 'error' });
+        }
+      } else {
+        const res = await addressApi.createAddress({
+          fullName: newAddress.fullName,
+          mobileNumber: newAddress.mobileNumber,
+          addressLine1: newAddress.addressLine1,
+          addressLine2: newAddress.addressLine2 || null,
+          landmark: newAddress.landmark || null,
+          city: newAddress.city,
+          state: newAddress.state,
+          country: newAddress.country,
+          postalCode: newAddress.postalCode,
+          addressType: newAddress.addressType || 'HOME',
+          isDefault: addresses.length === 0 ? true : !!newAddress.isDefault,
+        });
+
+        if (res.success && res.data) {
+          const updated = [...addresses, res.data];
+          setAddresses(updated);
+          setUser({ ...user, addresses: updated });
+          localStorage.setItem('atelier_user', JSON.stringify({ ...user, addresses: updated }));
+          
+          setNewAddress({ fullName: '', mobileNumber: '', addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', postalCode: '', country: '', addressType: 'HOME', isDefault: false });
+          setShowAddressForm(false);
+          setToast({ message: 'Address successfully added to your profile.', type: 'success' });
+        } else {
+          setToast({ message: res.message || 'Failed to add address.', type: 'error' });
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      setToast({ message: 'An error occurred while saving address.', type: 'error' });
+    }
   };
 
-  const handleDeleteAddress = (id) => {
-    const updated = addresses.filter((addr) => addr.id !== id);
-    setAddresses(updated);
-    setUser({ ...user, addresses: updated });
+  const handleDeleteAddress = async (id) => {
+    try {
+      const { addressApi } = await import('@/lib/api');
+      const res = await addressApi.deleteAddress(id);
+      if (res.success) {
+        const updated = addresses.filter((addr) => addr.id !== id);
+        setAddresses(updated);
+        setUser({ ...user, addresses: updated });
+        localStorage.setItem('atelier_user', JSON.stringify({ ...user, addresses: updated }));
+        setToast({ message: 'Address successfully deleted from your profile.', type: 'success' });
+      } else {
+        setToast({ message: res.message || 'Failed to delete address.', type: 'error' });
+      }
+    } catch (err) {
+      console.error(err);
+      setToast({ message: 'An error occurred while deleting address.', type: 'error' });
+    }
   };
+
+  const handleSetDefaultAddress = async (id) => {
+    try {
+      const { addressApi } = await import('@/lib/api');
+      const res = await addressApi.setDefaultAddress(id);
+      if (res.success) {
+        const updated = addresses.map((addr) => ({
+          ...addr,
+          isDefault: addr.id === id
+        }));
+        setAddresses(updated);
+        setUser({ ...user, addresses: updated });
+        localStorage.setItem('atelier_user', JSON.stringify({ ...user, addresses: updated }));
+        setToast({ message: 'Default address updated successfully.', type: 'success' });
+      } else {
+        setToast({ message: res.message || 'Failed to update default address.', type: 'error' });
+      }
+    } catch (err) {
+      console.error(err);
+      setToast({ message: 'An error occurred while updating default address.', type: 'error' });
+    }
+  };
+
+  const handleStartEditAddress = (addr) => {
+    setNewAddress({
+      fullName: addr.fullName,
+      mobileNumber: addr.mobileNumber,
+      addressLine1: addr.addressLine1,
+      addressLine2: addr.addressLine2 || '',
+      landmark: addr.landmark || '',
+      city: addr.city,
+      state: addr.state,
+      postalCode: addr.postalCode,
+      country: addr.country,
+      addressType: addr.addressType,
+      isDefault: addr.isDefault,
+    });
+    setEditingAddressId(addr.id);
+    setShowAddressForm(true);
+  };
+
+  // Map backend order to OrderCard properties
+  const mappedOrders = ordersList.map(o => ({
+    id: o.id,
+    date: new Date(o.placedAt || o.createdAt).toISOString().split('T')[0],
+    status: o.status,
+    total: Number(o.totalAmount),
+    paymentMethod: o.payments && o.payments.length > 0 ? o.payments[0].provider : 'Apple Pay',
+    items: o.items ? o.items.map(item => ({
+      id: item.id,
+      name: item.productName,
+      size: 'M',
+      color: 'Black',
+      quantity: item.quantity,
+      price: Number(item.productPrice),
+      image: item.product?.images && item.product.images.length > 0 
+        ? item.product.images[0].imageUrl 
+        : 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=300'
+    })) : [],
+    shippingAddress: o.shippingAddress ? {
+      street: o.shippingAddress.addressLine1 + (o.shippingAddress.addressLine2 ? ', ' + o.shippingAddress.addressLine2 : ''),
+      city: o.shippingAddress.city,
+      state: o.shippingAddress.state,
+      zip: o.shippingAddress.postalCode,
+      country: o.shippingAddress.country
+    } : {
+      street: '144 Crosby Street, Suite 4B',
+      city: 'New York',
+      state: 'NY',
+      zip: '10012',
+      country: 'United States'
+    }
+  }));
 
   // Render content based on selected tab
   const renderTabContent = () => {
@@ -113,7 +274,7 @@ export default function ProfilePage() {
             <div className="grid grid-cols-3 gap-4">
               <div className="border border-border p-4 rounded-xl bg-secondary/10">
                 <span className="text-[9px] uppercase tracking-wider text-muted font-semibold block">Total Orders</span>
-                <span className="font-serif text-2xl font-bold block mt-1">{orders.length}</span>
+                <span className="font-serif text-2xl font-bold block mt-1">{mappedOrders.length}</span>
               </div>
               <div className="border border-border p-4 rounded-xl bg-secondary/10">
                 <span className="text-[9px] uppercase tracking-wider text-muted font-semibold block">Wishlisted Items</span>
@@ -137,9 +298,11 @@ export default function ProfilePage() {
                 </button>
               </div>
 
-              {orders.length > 0 ? (
+              {loadingOrders ? (
+                <div className="py-6 text-xs text-muted">Retrieving order logs...</div>
+              ) : mappedOrders.length > 0 ? (
                 <div className="space-y-4">
-                  {orders.slice(0, 2).map((order) => (
+                  {mappedOrders.slice(0, 1).map((order) => (
                     <OrderCard key={order.id} order={order} />
                   ))}
                 </div>
@@ -196,9 +359,11 @@ export default function ProfilePage() {
             <h4 className="font-serif text-lg font-semibold uppercase text-foreground border-b border-border pb-3 mb-6">
               Complete Order Log
             </h4>
-            {orders.length > 0 ? (
+            {loadingOrders ? (
+              <div className="py-12 text-center text-xs text-muted font-serif italic">Retrieving order logs...</div>
+            ) : mappedOrders.length > 0 ? (
               <div className="space-y-6">
-                {orders.map((order) => (
+                {mappedOrders.map((order) => (
                   <OrderCard key={order.id} order={order} />
                 ))}
               </div>
@@ -228,7 +393,6 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* Dynamic address addition form simulator */}
             {showAddressForm && (
               <form onSubmit={handleAddAddress} className="border border-border p-6 rounded-xl bg-secondary/15 space-y-4">
                 <span className="text-[9px] uppercase tracking-[0.2em] font-semibold text-muted block mb-2">
@@ -372,7 +536,6 @@ export default function ProfilePage() {
               </form>
             )}
 
-            {/* List addresses */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {addresses.map((addr) => {
                 const TypeIcon = addr.addressType === 'HOME' ? Home : addr.addressType === 'WORK' ? Briefcase : Map;
@@ -404,17 +567,25 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   <div className="flex gap-3 justify-end mt-6 pt-4 border-t border-border/40 text-[9px] uppercase tracking-widest font-bold text-muted">
+                    {!addr.isDefault && (
+                      <button
+                        onClick={() => handleSetDefaultAddress(addr.id)}
+                        className="hover:text-foreground mr-auto transition-colors"
+                      >
+                        Set Default
+                      </button>
+                    )}
                     <button
-                      onClick={() => alert('Editing addresses disabled in prototype.')}
+                      onClick={() => handleStartEditAddress(addr)}
                       className="hover:text-foreground flex items-center gap-1 transition-colors"
                     >
-                      <Edit className="w-3 h-3 stroke-[1.5]" /> Edit
+                      <Edit className="w-3.5 h-3.5 stroke-[1.5]" /> Edit
                     </button>
                     <button
                       onClick={() => handleDeleteAddress(addr.id)}
                       className="hover:text-red-600 flex items-center gap-1 transition-colors"
                     >
-                      <Trash2 className="w-3 h-3 stroke-[1.5]" /> Delete
+                      <Trash2 className="w-3.5 h-3.5 stroke-[1.5]" /> Delete
                     </button>
                   </div>
                 </div>
@@ -509,6 +680,13 @@ export default function ProfilePage() {
         <div className="flex-1 min-w-0">{renderTabContent()}</div>
 
       </div>
+
+      {/* Reusable Toast Notifications */}
+      <Toast 
+        message={toast.message} 
+        type={toast.type} 
+        onClose={() => setToast({ message: '', type: 'success' })} 
+      />
     </div>
   );
 }

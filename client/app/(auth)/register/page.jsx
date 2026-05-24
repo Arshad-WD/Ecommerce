@@ -5,46 +5,39 @@ import AuthSplitLayout from '@/components/auth/AuthSplitLayout';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useShop } from '@/lib/ShopContext';
-import { Loader2 } from 'lucide-react';
+import Toast from '@/components/shared/Toast';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { setUser } = useShop();
-
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
-  const [error, setError] = useState('');
+  const { signup } = useShop();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [toast, setToast] = useState({ message: '', type: 'success' });
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (formData.password !== formData.confirmPassword) {
-      return setError('Passwords do not match');
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
     }
 
+    setLoading(true);
     try {
-      setLoading(true);
-      const { authApi } = await import('@/lib/api');
-      const response = await authApi.signup({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password
-      });
-
-      if (response && response.success) {
-        const userData = response.user || response.data?.user;
-        if (userData) {
-          setUser(userData);
-          localStorage.setItem('atelier_token', response.token || response.data?.accessToken || '');
-          localStorage.setItem('atelier_user', JSON.stringify(userData));
-          router.push('/profile');
-        }
+      const res = await signup(name, email, password);
+      if (res.success) {
+        router.push('/profile');
       } else {
-        setError(response.message || 'Registration failed');
+        setError(res.message || 'Registration failed. Please try again.');
       }
     } catch (err) {
-      setError(err.message || 'An error occurred during registration');
+      console.error(err);
+      setError('An error occurred during registration. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -70,6 +63,13 @@ export default function RegisterPage() {
           </p>
         </div>
 
+        {/* Premium Error Alert */}
+        {error && (
+          <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-600 rounded-xl text-xs font-semibold tracking-wide uppercase">
+            {error}
+          </div>
+        )}
+
         {/* Input Form */}
         <form onSubmit={handleRegisterSubmit} className="space-y-4">
           {error && (
@@ -85,8 +85,8 @@ export default function RegisterPage() {
             <input
               type="text"
               required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="Alexander Vane"
               className="w-full px-4 py-2.5 bg-secondary/35 border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
               id="register-name-input"
@@ -100,8 +100,8 @@ export default function RegisterPage() {
             <input
               type="email"
               required
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="vane@atelier.com"
               className="w-full px-4 py-2.5 bg-secondary/35 border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
               id="register-email-input"
@@ -115,8 +115,8 @@ export default function RegisterPage() {
             <input
               type="password"
               required
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               className="w-full px-4 py-2.5 bg-secondary/35 border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
               id="register-password-input"
@@ -130,8 +130,8 @@ export default function RegisterPage() {
             <input
               type="password"
               required
-              value={formData.confirmPassword}
-              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="••••••••"
               className="w-full px-4 py-2.5 bg-secondary/35 border border-border rounded-xl text-xs font-semibold tracking-wider placeholder-neutral-400 focus:border-foreground uppercase"
               id="register-confirm-input"
@@ -141,10 +141,10 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 bg-foreground text-background dark:bg-white dark:text-neutral-950 text-xs uppercase tracking-widest font-bold rounded-xl hover:opacity-90 transition-opacity mt-2 flex items-center justify-center gap-2 disabled:opacity-70"
+            className="w-full py-3.5 bg-foreground text-background dark:bg-white dark:text-neutral-950 text-xs uppercase tracking-widest font-bold rounded-xl hover:opacity-90 transition-opacity mt-2 flex items-center justify-center gap-2"
             id="register-submit-button"
           >
-            {loading ? <Loader2 size={16} className="animate-spin" /> : 'Create Account'}
+            {loading ? 'Creating Account...' : 'Create Account'}
           </button>
         </form>
 
@@ -162,8 +162,8 @@ export default function RegisterPage() {
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => {
-              alert('Registering via Google auth...');
-              router.push('/profile');
+              setToast({ message: 'Registering via Google auth simulation...', type: 'success' });
+              setTimeout(() => router.push('/profile'), 1500);
             }}
             className="py-3 border border-border rounded-xl text-[10px] font-bold tracking-widest uppercase hover:bg-secondary transition-colors"
           >
@@ -171,8 +171,8 @@ export default function RegisterPage() {
           </button>
           <button
             onClick={() => {
-              alert('Registering via Apple Pay ID...');
-              router.push('/profile');
+              setToast({ message: 'Registering via Apple Pay ID simulation...', type: 'success' });
+              setTimeout(() => router.push('/profile'), 1500);
             }}
             className="py-3 border border-border rounded-xl text-[10px] font-bold tracking-widest uppercase hover:bg-secondary transition-colors"
           >
@@ -188,6 +188,13 @@ export default function RegisterPage() {
           </Link>
         </p>
       </div>
+
+      {/* Reusable Toast Notifications */}
+      <Toast 
+        message={toast.message} 
+        type={toast.type} 
+        onClose={() => setToast({ message: '', type: 'success' })} 
+      />
     </AuthSplitLayout>
   );
 }

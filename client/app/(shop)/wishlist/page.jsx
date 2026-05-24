@@ -1,18 +1,29 @@
 'use client';
 
 import { useShop } from '@/lib/ShopContext';
-import { products } from '@/lib/mock-data';
 import { Trash2, ShoppingBag, ArrowRight, Heart } from 'lucide-react';
 import Link from 'next/link';
 import { formatCurrency } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function WishlistPage() {
   const { wishlist, toggleWishlist, addToCart } = useShop();
   const [toastMsg, setToastMsg] = useState('');
+  const [productsList, setProductsList] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // 1. Filter main items based on wishlist IDs
-  const wishlistedItems = products.filter((prod) => wishlist.includes(prod.id));
+  // Fetch all active products to display favorited ones
+  useEffect(() => {
+    import('@/lib/api').then(({ productApi }) => {
+      productApi.listProducts({ limit: 100 }).then((res) => {
+        setProductsList(res.products || []);
+      }).catch(err => console.error(err))
+      .finally(() => setLoading(false));
+    });
+  }, []);
+
+  // Filter main items based on wishlist IDs
+  const wishlistedItems = productsList.filter((prod) => wishlist.includes(prod.id));
 
   const handleMoveToCart = (product) => {
     // Add default size (usually S or first available)
@@ -39,8 +50,12 @@ export default function WishlistPage() {
         </h1>
       </div>
 
-      {/* 2. Empty Wishlist State */}
-      {wishlistedItems.length === 0 ? (
+      {/* 2. Loading / Empty Wishlist State */}
+      {loading ? (
+        <div className="max-w-7xl mx-auto px-4 py-32 text-center font-serif text-lg italic text-muted animate-pulse">
+          Loading Selections...
+        </div>
+      ) : wishlistedItems.length === 0 ? (
         <div className="text-center py-20 border border-dashed border-border rounded-2xl p-8 max-w-lg mx-auto flex flex-col items-center">
           <Heart className="w-10 h-10 text-muted stroke-[1.25] mb-6 animate-pulse" />
           <h2 className="font-serif text-xl md:text-2xl uppercase tracking-wide text-foreground mb-3">
@@ -67,7 +82,7 @@ export default function WishlistPage() {
               <div className="aspect-[3/4] relative w-full overflow-hidden rounded-xl bg-secondary mb-4">
                 <Link href={`/product/${prod.slug}`}>
                   <img
-                    src={prod.images[0]}
+                    src={typeof prod.images[0] === 'string' ? prod.images[0] : (prod.images[0]?.imageUrl || prod.images[0]?.url)}
                     alt={prod.name}
                     className="w-full h-full object-cover object-center group-hover:scale-102 transition-transform duration-500"
                   />

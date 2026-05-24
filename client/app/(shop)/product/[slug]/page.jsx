@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { notFound, useParams } from 'next/navigation';
-import { products, reviews as mockReviews } from '@/lib/mock-data';
+import { useParams } from 'next/navigation';
 import { useShop } from '@/lib/ShopContext';
 import ProductGallery from '@/components/products/ProductGallery';
 import ProductCard from '@/components/products/ProductCard';
@@ -11,81 +10,77 @@ import { formatCurrency } from '@/lib/utils';
 import { Heart, ShoppingBag, Star, ArrowLeft, Minus, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { productApi } from '@/lib/api';
+import Toast from '@/components/shared/Toast';
 
 export default function ProductDetailsPage() {
   const params = useParams();
   const { slug } = params;
-  
-  // Refactor: Move from mock `find` to actual unified api state
   const { cart, wishlist, toggleWishlist, addToCart } = useShop();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState(false);
-
-  // 2. Local Customization States
-  const [selectedSize, setSelectedSize] = useState('M'); // default fallback
-  const [selectedColor, setSelectedColor] = useState('Black'); // default fallback
+  const [selectedSize, setSelectedSize] = useState('');
+  const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [addedNotification, setAddedNotification] = useState(false);
   const [relatedProducts, setRelatedProducts] = useState([]);
+  const [productReviews, setProductReviews] = useState([]);
+  const [toast, setToast] = useState({ message: '', type: 'success' });
 
   useEffect(() => {
-    async function loadProduct() {
-      try {
-        setLoading(true);
-        const res = await productApi.getProductDetails(slug);
-        const fetchedProduct = res?.data || res;
-        
-        if (fetchedProduct) {
-          // Normalize Images: MinIO returns { id, url }, Map to strings
-          let normalizedImages = [];
-          if (fetchedProduct.images && Array.isArray(fetchedProduct.images)) {
-             normalizedImages = fetchedProduct.images.map(img => typeof img === 'object' && img !== null ? (img.imageUrl || img.url) : img);
-          }
-          if (normalizedImages.length === 0) {
-            normalizedImages = ['https://images.unsplash.com/photo-1591047139829-d91aecb6caea?q=80&w=1000&auto=format&fit=crop']; // Fallback placeholder
-          }
-          fetchedProduct.images = normalizedImages;
+    let active = true;
+    setLoading(true);
+    import('@/lib/api').then(({ productApi }) => {
+      productApi.getProductDetails(slug).then((prod) => {
+        if (active && prod) {
+          setProduct(prod);
+          setSelectedSize(prod.sizes[0] || 'M');
+          setSelectedColor(prod.colors[0] || 'Black');
+          setProductReviews(prod.reviews ? prod.reviews.map(rev => ({
+            id: rev.id,
+            userName: rev.user?.name || 'Anonymous Client',
+            rating: rev.rating,
+            comment: rev.comment,
+            date: new Date(rev.createdAt).toISOString().split('T')[0]
+          })) : []);
 
-          // Normalize sizes/colors structurally if backend schema is limited
-          fetchedProduct.sizes = fetchedProduct.sizes || ['S', 'M', 'L', 'XL'];
-          fetchedProduct.colors = fetchedProduct.colors || ['Black', 'Off-White'];
-
-          setProduct(fetchedProduct);
-          setSelectedSize(fetchedProduct.sizes[0]);
-          setSelectedColor(fetchedProduct.colors[0]);
-
-          // Optional: Fetch related items by category
-          const catId = typeof fetchedProduct.category === 'object' ? fetchedProduct.category?.id : fetchedProduct.categoryId;
-          if (catId) {
-             const relatedRes = await productApi.listProducts({ category: catId, limit: 5 });
-             const relList = relatedRes?.products || relatedRes?.data?.products || [];
-             setRelatedProducts(relList.filter(p => p.id !== fetchedProduct.id).slice(0, 4));
-          }
-        } else {
-          setFetchError(true);
+          // Load related garments
+          productApi.listProducts({ category: prod.category }).then((res) => {
+            if (active && res.products) {
+              setRelatedProducts(res.products.filter(p => p.id !== prod.id).slice(0, 4));
+            }
+          });
+          setLoading(false);
+        } else if (active) {
+          setLoading(false);
         }
-      } catch (err) {
-        console.error("Failed to load product details:", err);
-        setFetchError(true);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadProduct();
+      }).catch(err => {
+        console.error(err);
+        if (active) setLoading(false);
+      });
+    });
+    return () => { active = false; };
   }, [slug]);
 
   if (loading) {
-     return <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center text-muted font-serif animate-pulse">Loading collection piece...</div>;
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-32 text-center font-serif text-lg italic text-muted animate-pulse">
+        Loading Atelier Silhouette...
+      </div>
+    );
   }
 
-  if (fetchError || !product) {
-    notFound();
+  if (!product) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-32 text-center font-serif text-lg italic text-muted">
+        Garment not found.
+        <Link href="/products" className="underline font-bold tracking-widest uppercase text-xs block mt-4">
+          Return to Catalog
+        </Link>
+      </div>
+    );
   }
 
-  // Extract reviews for this product
-  const productReviews = mockReviews.filter((rev) => rev.productId === product.id);
   const isWishlisted = wishlist.includes(product.id);
 
   const handleAddToCart = () => {
@@ -210,7 +205,7 @@ export default function ProductDetailsPage() {
                 Size: <span className="text-foreground">{selectedSize}</span>
               </span>
               <button
-                onClick={() => alert('Sizing chart: Standard athletic luxury silhouettes.')}
+                onClick={() => setToast({ message: 'Sizing chart: Standard athletic luxury silhouettes.', type: 'success' })}
                 className="text-[10px] uppercase tracking-widest text-muted hover:text-foreground underline font-bold"
               >
                 Size Guide
@@ -386,6 +381,12 @@ export default function ProductDetailsPage() {
         </button>
       </div>
 
-    </div>
-  );
+    {/* Reusable Toast Notifications */}
+    <Toast 
+      message={toast.message} 
+      type={toast.type} 
+      onClose={() => setToast({ message: '', type: 'success' })} 
+    />
+  </div>
+);
 }

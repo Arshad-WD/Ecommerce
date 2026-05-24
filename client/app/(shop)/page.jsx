@@ -1,6 +1,7 @@
 'use client';
 
-import { products, categories, testimonials } from '@/lib/mock-data';
+import { useState, useEffect } from 'react';
+import { testimonials } from '@/lib/mock-data';
 import HeroSection from '@/components/home/HeroSection';
 import ProductCard from '@/components/products/ProductCard';
 import CategoryCard from '@/components/home/CategoryCard';
@@ -8,14 +9,32 @@ import BentoGrid from '@/components/home/BentoGrid';
 import TestimonialCard from '@/components/home/TestimonialCard';
 import { ArrowRight, Mail } from 'lucide-react';
 import Link from 'next/link';
+import Toast from '@/components/shared/Toast';
 
 export default function HomePage() {
-  // Extract featured luxury items
-  const featuredProducts = products.filter((prod) => prod.featured).slice(0, 4);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState({ message: '', type: 'success' });
+
+  useEffect(() => {
+    import('@/lib/api').then(({ productApi }) => {
+      // Load featured products
+      productApi.listProducts({ limit: 4 }).then((res) => {
+        setFeaturedProducts(res.products || []);
+      }).catch(err => console.error(err));
+
+      // Load categories
+      productApi.listCategories().then((cats) => {
+        setCategoriesList(cats || []);
+      }).catch(err => console.error(err))
+      .finally(() => setLoading(false));
+    });
+  }, []);
 
   const handleSubscribe = (e) => {
     e.preventDefault();
-    alert('Thank you. You have been added to the Atelier list.');
+    setToast({ message: 'Thank you. You have been added to the Atelier list.', type: 'success' });
     e.target.reset();
   };
 
@@ -44,11 +63,23 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-12 sm:gap-x-6">
-          {featuredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="space-y-4">
+                <div className="aspect-[3/4] bg-neutral-200 dark:bg-neutral-800 rounded-xl" />
+                <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-2/3" />
+                <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-1/3" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-12 sm:gap-x-6">
+            {featuredProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* 3. Portraited Categories Editorial Layout */}
@@ -62,11 +93,19 @@ export default function HomePage() {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-          {categories.map((category) => (
-            <CategoryCard key={category.id} category={category} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-6 animate-pulse">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="aspect-[4/5] bg-neutral-200 dark:bg-neutral-800 rounded-xl" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+            {categoriesList.map((category) => (
+              <CategoryCard key={category.id} category={category} />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* 4. Asymmetric Bento Grid Section */}
@@ -133,6 +172,12 @@ export default function HomePage() {
           </form>
         </div>
       </section>
-    </div>
-  );
+    {/* Reusable Toast Notifications */}
+    <Toast 
+      message={toast.message} 
+      type={toast.type} 
+      onClose={() => setToast({ message: '', type: 'success' })} 
+    />
+  </div>
+);
 }

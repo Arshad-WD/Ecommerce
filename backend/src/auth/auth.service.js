@@ -102,6 +102,7 @@ class AuthService {
                 role: true,
                 avatarUrl: true,
                 createdAt: true,
+                addresses: true,
             },
         });
 
@@ -216,6 +217,9 @@ class AuthService {
         await prisma.user.update({
             where: {
                 id: resetToken.userId,
+            },
+            data: {
+                passwordHash: hashedPassword,
             },
         });
 

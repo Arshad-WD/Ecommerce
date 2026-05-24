@@ -186,7 +186,7 @@ class AdminService {
         stockQuantity: true,
         isActive: true,
         category: { select: { name: true } },
-        images: { take: 1, select: { imageUrl: true } }
+        images: true,
       },
       skip: parseInt(skip),
       take: parseInt(take),

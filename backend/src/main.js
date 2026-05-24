@@ -12,6 +12,7 @@ const productRoutes = require('./products/product.routes');
 const cartRoutes = require('./cart/cart.routes');
 const orderRoutes = require('./orders/order.routes');
 const adminRoutes = require('./admin/admin.routes');
+const addressRoutes = require('./addresses/address.route');
 
 const errorMiddleware = require('./common/middleware/error.middleware');
 
@@ -25,8 +26,28 @@ app.use(cookieParser());
 app.use(helmet());
 app.use(compression());
 
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    
+    const isAllowed = allowedOrigins.includes(origin) || 
+      origin.endsWith('.vercel.app') || 
+      origin.startsWith('http://localhost:') ||
+      origin.startsWith('http://127.0.0.1:') ||
+      origin.startsWith('http://192.168.');
+      
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 
@@ -47,6 +68,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api', orderRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/addresses', addressRoutes);
 
 
 // 404 Handler
@@ -65,6 +87,10 @@ app.use(errorMiddleware);
 // Server
 const PORT = process.env.PORT || 5000
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+module.exports = app;

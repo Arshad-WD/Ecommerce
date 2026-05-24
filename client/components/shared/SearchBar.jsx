@@ -114,7 +114,7 @@ export default function SearchBar() {
                       >
                         <div className="w-20 h-24 relative overflow-hidden rounded-lg bg-secondary shrink-0">
                           <img
-                            src={product.images[0]}
+                            src={typeof product.images[0] === 'string' ? product.images[0] : (product.images[0]?.imageUrl || product.images[0]?.url)}
                             alt={product.name}
                             className="w-full h-full object-cover object-center"
                           />
