@@ -96,48 +96,56 @@ export function ShopProvider({ children }) {
 
   // User Actions
   const login = async (email, password) => {
-    const { authApi, cartApi } = await import('./api');
-    const res = await authApi.login({ email, password });
-    if (res.success && res.user) {
-      setUser(res.user);
-      // Fetch backend cart on login
-      try {
-        const cartRes = await cartApi.getCart();
-        if (cartRes.success && cartRes.data) {
-          const mappedCart = cartRes.data.items.map(item => ({
-            cartItemId: item.id,
-            id: item.productId,
-            name: item.product.name,
-            slug: item.product.slug,
-            price: item.product.discountPrice ? Number(item.product.discountPrice) : Number(item.product.price),
-            originalPrice: Number(item.product.price),
-            size: 'M',
-            color: 'Black',
-            quantity: item.quantity,
-            image: item.product.images && item.product.images.length > 0 ? item.product.images[0].imageUrl : '',
-            category: item.product.categoryId
-          }));
-          setCart(mappedCart);
-          localStorage.setItem('atelier_cart', JSON.stringify(mappedCart));
+    try {
+      const { authApi, cartApi } = await import('./api');
+      const res = await authApi.login({ email, password });
+      if (res.success && res.user) {
+        setUser(res.user);
+        // Fetch backend cart on login
+        try {
+          const cartRes = await cartApi.getCart();
+          if (cartRes.success && cartRes.data) {
+            const mappedCart = cartRes.data.items.map(item => ({
+              cartItemId: item.id,
+              id: item.productId,
+              name: item.product.name,
+              slug: item.product.slug,
+              price: item.product.discountPrice ? Number(item.product.discountPrice) : Number(item.product.price),
+              originalPrice: Number(item.product.price),
+              size: 'M',
+              color: 'Black',
+              quantity: item.quantity,
+              image: item.product.images && item.product.images.length > 0 ? item.product.images[0].imageUrl : '',
+              category: item.product.categoryId
+            }));
+            setCart(mappedCart);
+            localStorage.setItem('atelier_cart', JSON.stringify(mappedCart));
+          }
+        } catch (e) {
+          console.error('Sync cart error on login:', e);
         }
-      } catch (e) {
-        console.error('Sync cart error on login:', e);
+        return { success: true };
       }
-      return { success: true };
+      return res;
+    } catch (error) {
+      return { success: false, message: error.message || 'Invalid email or password.' };
     }
-    return res;
   };
 
   const signup = async (name, email, password) => {
-    const { authApi } = await import('./api');
-    const res = await authApi.signup({ name, email, password });
-    if (res.success && res.user) {
-      setUser(res.user);
-      setCart([]);
-      localStorage.setItem('atelier_cart', JSON.stringify([]));
-      return { success: true };
+    try {
+      const { authApi } = await import('./api');
+      const res = await authApi.signup({ name, email, password });
+      if (res.success && res.user) {
+        setUser(res.user);
+        setCart([]);
+        localStorage.setItem('atelier_cart', JSON.stringify([]));
+        return { success: true };
+      }
+      return res;
+    } catch (error) {
+      return { success: false, message: error.message || 'Registration failed.' };
     }
-    return res;
   };
 
   const logout = async () => {
