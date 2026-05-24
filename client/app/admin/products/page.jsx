@@ -112,7 +112,7 @@ export default function ProductsAdminPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-4 border-b border-border">
         <div>
           <h1 className="font-serif text-3xl text-foreground">Products Portfolio</h1>
-          <p className="text-muted mt-2 text-sm tracking-wide">Manage your atelier's inventory and seasonal collections.</p>
+          <p className="text-muted mt-2 text-sm tracking-wide">Manage your atelier&apos;s inventory and seasonal collections.</p>
         </div>
         <button 
           onClick={() => {

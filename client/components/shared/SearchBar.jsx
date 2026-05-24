@@ -147,7 +147,7 @@ export default function SearchBar() {
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <p className="font-serif text-xl text-muted italic">No items found matching "{query}"</p>
+                  <p className="font-serif text-xl text-muted italic">No items found matching &quot;{query}&quot;</p>
                 </div>
               )}
             </div>

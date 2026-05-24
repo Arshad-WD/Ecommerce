@@ -14,7 +14,7 @@ export default function TestimonialCard({ testimonial }) {
       <div className="relative z-10 flex-1 flex flex-col justify-between pt-4">
         {/* Quote text in elegant italic serif */}
         <p className="font-serif text-lg md:text-xl text-foreground/90 italic leading-relaxed mb-8 select-none">
-          "{quote}"
+          &quot;{quote}&quot;
         </p>
 
         {/* Customer Profile detail */}

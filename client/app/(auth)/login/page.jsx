@@ -157,7 +157,7 @@ export default function LoginPage() {
 
         {/* Account redirect */}
         <p className="text-center text-xs text-muted font-medium pt-4">
-          Don't have an account?{' '}
+          Don&apos;t have an account?{' '}
           <Link href="/register" className="text-foreground font-bold hover:underline">
             Register Here
           </Link>

@@ -15,6 +15,39 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('overview');
   const router = useRouter();
 
+  // Address simulation state
+  const [addresses, setAddresses] = useState([]);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [newAddress, setNewAddress] = useState({
+    fullName: '',
+    mobileNumber: '',
+    addressLine1: '',
+    addressLine2: '',
+    landmark: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    country: '',
+    addressType: 'HOME',
+    isDefault: false,
+  });
+
+  // Settings form state
+  const [settingsForm, setSettingsForm] = useState({
+    name: '',
+    email: '',
+  });
+
+  useEffect(() => {
+    if (user) {
+      setAddresses(user.addresses || []);
+      setSettingsForm({
+        name: user.name || '',
+        email: user.email || '',
+      });
+    }
+  }, [user]);
+
   useEffect(() => {
     if (!loading && !user) {
       router.replace('/login');
@@ -37,29 +70,6 @@ export default function ProfilePage() {
 
   // Load orders (future API integration point, currently empty for new users)
   const orders = user.orders || [];
-
-  // Address simulation state
-  const [addresses, setAddresses] = useState(user.addresses || []);
-  const [showAddressForm, setShowAddressForm] = useState(false);
-  const [newAddress, setNewAddress] = useState({
-    fullName: '',
-    mobileNumber: '',
-    addressLine1: '',
-    addressLine2: '',
-    landmark: '',
-    city: '',
-    state: '',
-    postalCode: '',
-    country: '',
-    addressType: 'HOME',
-    isDefault: false,
-  });
-
-  // Settings form state
-  const [settingsForm, setSettingsForm] = useState({
-    name: user.name,
-    email: user.email,
-  });
 
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 

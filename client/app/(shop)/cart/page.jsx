@@ -203,7 +203,7 @@ export default function CartPage() {
               {couponCode && (
                 <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 font-bold mt-2">
                   <Ticket className="w-3.5 h-3.5" />
-                  <span>Promo Applied: "{couponCode}" ({discountPercent}% Discount)</span>
+                  <span>Promo Applied: &quot;{couponCode}&quot; ({discountPercent}% Discount)</span>
                 </div>
               )}
 
