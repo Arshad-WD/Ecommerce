@@ -15,6 +15,7 @@ router.get('/me', adminController.getMe);
 // Admin Product CRUD
 router.post('/products', productController.createProduct);
 router.put('/products/:id', productController.updateProduct);
+router.delete('/products/images/:imageId', productController.deleteImage);
 router.delete('/products/:id', productController.deleteProduct);
 router.patch('/products/:id/images', upload.array('images', 5), productController.uploadImages);
 

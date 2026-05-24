@@ -18,6 +18,7 @@ export function ShopProvider({ children }) {
     if (typeof window !== 'undefined') {
       const storedCart = localStorage.getItem('atelier_cart');
       const storedWishlist = localStorage.getItem('atelier_wishlist');
+      const storedUser = localStorage.getItem('atelier_user');
       
       if (storedCart) {
         try {

@@ -63,6 +63,7 @@ export default function LoginPage() {
 
         {/* Input Form */}
         <form onSubmit={handleLoginSubmit} className="space-y-4">
+          {error && <div className="text-xs text-red-500 font-bold uppercase tracking-wide p-2 bg-red-500/10 rounded-xl">{error}</div>}
           <div className="space-y-1">
             <label className="text-[9px] uppercase tracking-widest font-bold text-muted block">
               Email Address

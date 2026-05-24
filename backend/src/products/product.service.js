@@ -83,6 +83,7 @@ class ProductService {
     };
   }
 
+<<<<<<< HEAD
 
   async getProductById(idOrSlug) {
     const product =
@@ -94,6 +95,14 @@ class ProductService {
           ],
         },
 
+=======
+  async getProductById(idOrSlug) {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
+    
+    const product =
+      await prisma.product.findFirst({
+        where: isUuid ? { id: idOrSlug } : { slug: idOrSlug },
+>>>>>>> origin/main
         include: {
           images: true,
           category: true,

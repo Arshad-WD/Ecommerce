@@ -239,13 +239,13 @@ function ProductsContent() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="bg-transparent text-xs font-bold tracking-wide uppercase focus:outline-none border-none py-1 text-foreground"
+                className="bg-transparent text-[10px] font-bold tracking-widest uppercase focus:outline-none border-none py-1 text-foreground cursor-pointer appearance-none pr-4"
                 id="sorting-select-dropdown"
               >
-                <option value="featured">Featured First</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-                <option value="rating">Rating</option>
+                <option className="bg-background text-foreground text-xs font-semibold py-2" value="featured">Featured First</option>
+                <option className="bg-background text-foreground text-xs font-semibold py-2" value="price-low">Price: Low to High</option>
+                <option className="bg-background text-foreground text-xs font-semibold py-2" value="price-high">Price: High to Low</option>
+                <option className="bg-background text-foreground text-xs font-semibold py-2" value="rating">Rating Overview</option>
               </select>
             </div>
           </div>

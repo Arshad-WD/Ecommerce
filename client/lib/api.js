@@ -22,12 +22,44 @@ const getAuthHeaders = () => {
   };
 };
 
-// Helper for live fetches
+// Silently attempt to get a new access token using the secure httpOnly cookie
+async function tryRefreshToken() {
+  if (typeof window === 'undefined') return false;
+  try {
+    // No body needed — the httpOnly cookie is sent automatically by the browser
+    const res = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // sends the httpOnly refresh_token cookie
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    const newToken = data?.data?.accessToken || data?.accessToken;
+    if (newToken) {
+      localStorage.setItem('atelier_token', newToken);
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+// Helper for live fetches — auto-refreshes and retries once on 401
 async function fetcher(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
   const headers = { ...getAuthHeaders(), ...options.headers };
-  const response = await fetch(url, { ...options, headers });
-  
+  let response = await fetch(url, { ...options, headers, credentials: 'include' });
+
+  // On 401, try refresh and retry once
+  if (response.status === 401) {
+    const refreshed = await tryRefreshToken();
+    if (refreshed) {
+      const retryHeaders = { ...getAuthHeaders(), ...options.headers };
+      response = await fetch(url, { ...options, headers: retryHeaders, credentials: 'include' });
+    }
+  }
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || `API Error: Status ${response.status}`);
@@ -35,10 +67,7 @@ async function fetcher(endpoint, options = {}) {
   return response.json();
 }
 
-
-// ==========================================
 // 1. AUTHENTICATION APIs (Customer + Admin)
-// ==========================================
 export const authApi = {
   signup: async (userData) => {
     if (USE_MOCK) {
@@ -187,9 +216,7 @@ export const authApi = {
 };
 
 
-// ==========================================
 // 2. USER APIs
-// ==========================================
 export const userApi = {
   getUser: async (id) => {
     if (USE_MOCK) {
@@ -233,10 +260,7 @@ export const userApi = {
   },
 };
 
-
-// ==========================================
 // 3. PRODUCT APIs (Public & Admin)
-// ==========================================
 export const productApi = {
   // Supports filtering, search, sorting and pagination
   listProducts: async (queryParams = {}) => {
@@ -375,6 +399,41 @@ export const productApi = {
     });
   },
 
+  adminUploadProductImages: async (id, imagesFormData) => {
+    if (USE_MOCK) {
+      await simulateNetwork(500);
+      return { success: true, message: 'Mock images uploaded' };
+    }
+    // We do NOT use the wrapper fetcher because fetcher hardcodes Content-Type: application/json for non-FormData?
+    // Wait, fetcher uses getAuthHeaders which sets application/json.
+    // For FormData we must NOT set Content-Type, so browser sets the boundary automatically.
+    const url = `${API_BASE_URL}/admin/products/${id}/images`;
+    const token = localStorage.getItem('atelier_token');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+    const response = await fetch(url, {
+      method: 'PATCH',
+      headers,
+      body: imagesFormData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Upload Error: Status ${response.status}`);
+    }
+    return response.json();
+  },
+
+  adminDeleteProductImage: async (imageId) => {
+    if (USE_MOCK) {
+      await simulateNetwork(300);
+      return { success: true, message: 'Image mock removed' };
+    }
+    return fetcher(`/admin/products/images/${imageId}`, {
+      method: 'DELETE',
+    });
+  },
+
   adminUpdateProduct: async (id, productData) => {
     if (USE_MOCK) {
       await simulateNetwork(350);
@@ -407,9 +466,7 @@ export const productApi = {
 };
 
 
-// ==========================================
 // 4. CART APIs (Customer)
-// ==========================================
 export const cartApi = {
   getCart: async () => {
     if (USE_MOCK) {
@@ -501,9 +558,7 @@ export const cartApi = {
 };
 
 
-// ==========================================
 // 5. CHECKOUT & ORDERS
-// ==========================================
 export const orderApi = {
   checkout: async (orderData) => {
     if (USE_MOCK) {
@@ -582,9 +637,7 @@ export const orderApi = {
 };
 
 
-// ==========================================
 // 6. ADMIN & ANALYTICS APIs
-// ==========================================
 export const adminApi = {
   getAdminMe: async () => {
     if (USE_MOCK) {
@@ -665,9 +718,7 @@ export const adminApi = {
 };
 
 
-// ==========================================
 // 7. INVENTORY APIs
-// ==========================================
 export const inventoryApi = {
   getInventoryStock: async () => {
     if (USE_MOCK) {

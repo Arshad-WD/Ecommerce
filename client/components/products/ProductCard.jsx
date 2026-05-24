@@ -12,6 +12,10 @@ export default function ProductCard({ product }) {
   const [hovered, setHovered] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
 
+  // Normalize image urls whether they are mock strings or Prisma MinIO objects
+  const img1 = images && images.length > 0 ? (typeof images[0] === 'string' ? images[0] : (images[0]?.imageUrl || images[0]?.url)) : 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=600&q=80';
+  const img2 = images && images.length > 1 ? (typeof images[1] === 'string' ? images[1] : (images[1]?.imageUrl || images[1]?.url)) : null;
+
   const isWishlisted = wishlist.includes(id);
 
   const handleWishlistClick = (e) => {
@@ -48,16 +52,16 @@ export default function ProductCard({ product }) {
         <Link href={`/product/${slug}`} className="block w-full h-full">
           {/* Main Campaign Image */}
           <img
-            src={images[0]}
+            src={img1}
             alt={name}
             className={`w-full h-full object-cover object-center transition-transform duration-700 ease-out ${
-              hovered && images[1] ? 'scale-102 opacity-0' : 'scale-100 opacity-100'
+              hovered && img2 ? 'scale-102 opacity-0' : 'scale-100 opacity-100'
             }`}
           />
           {/* Secondary Campaign Image (Revealed on Hover) */}
-          {images[1] && (
+          {img2 && (
             <img
-              src={images[1]}
+              src={img2}
               alt={`${name} lookbook angle`}
               className={`absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 ease-out ${
                 hovered ? 'scale-100 opacity-100' : 'scale-95 opacity-0'

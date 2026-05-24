@@ -100,10 +100,20 @@ class ProductController {
         message: 'Images uploaded',
         data: images,
         });
-        } catch (error) {
+    } catch (error) {
       next(error);
     }
+  }
+
+  async deleteImage(req, res, next) {
+    try {
+      const prisma = require('../prisma/prisma.service');
+      await prisma.productImage.delete({ where: { id: req.params.imageId } });
+      res.status(200).json({ success: true, message: 'Image deleted' });
+    } catch (error) {
+      next(error);
     }
+  }
 }
 
 module.exports = new ProductController();

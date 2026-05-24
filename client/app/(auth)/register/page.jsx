@@ -70,6 +70,12 @@ export default function RegisterPage() {
 
         {/* Input Form */}
         <form onSubmit={handleRegisterSubmit} className="space-y-4">
+          {error && (
+            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-500 text-[10px] font-bold tracking-widest uppercase text-center">
+              {error}
+            </div>
+          )}
+
           <div className="space-y-1">
             <label className="text-[9px] uppercase tracking-widest font-bold text-muted block">
               Full Name
