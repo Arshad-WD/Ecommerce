@@ -8,6 +8,14 @@ const selfOrAdminMiddleware = require(
   '../common/middleware/self-or-admin.middleware'
 );
 
+// Admin: list all users
+router.get(
+  '/',
+  authMiddleware,
+  adminMiddleware,
+  userController.getAllUsers
+);
+
 router.get(
   '/:id',
   authMiddleware,

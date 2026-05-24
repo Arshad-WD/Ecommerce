@@ -20,7 +20,7 @@ class AdminService {
     ]);
 
     return {
-      totalSales: totalSales._sum.totalAmount || 0,
+      totalSales: Number(totalSales._sum.totalAmount || 0),
       totalOrders,
       totalUsers,
     };
@@ -47,8 +47,42 @@ class AdminService {
       },
     });
 
-    // Grouping by date could be done here or on frontend
-    return sales;
+    // Group by date to match frontend expectation
+    const labels = [];
+    const salesData = [];
+    const ordersData = [];
+
+    // Create a map for all days in range to ensure no gaps
+    const dataMap = new Map();
+    for (let i = 0; i < days; i++) {
+      const d = new Date(startDate);
+      d.setDate(d.getDate() + i);
+      const dateString = d.toISOString().split('T')[0];
+      dataMap.set(dateString, { sales: 0, orders: 0 });
+    }
+
+    sales.forEach(order => {
+      const dateString = order.placedAt.toISOString().split('T')[0];
+      if (dataMap.has(dateString)) {
+        const current = dataMap.get(dateString);
+        current.sales += Number(order.totalAmount || 0);
+        current.orders += 1;
+        dataMap.set(dateString, current);
+      }
+    });
+
+    dataMap.forEach((value, key) => {
+      labels.push(key);
+      salesData.push(value.sales);
+      ordersData.push(value.orders);
+    });
+
+    return {
+      range,
+      labels,
+      sales: salesData,
+      orders: ordersData
+    };
   }
 
   async getTopProducts(limit = 5) {
@@ -56,9 +90,7 @@ class AdminService {
       by: ['productId', 'productName'],
       _sum: {
         quantity: true,
-      },
-      _count: {
-        _all: true,
+        subtotal: true,
       },
       orderBy: {
         _sum: {
@@ -68,7 +100,26 @@ class AdminService {
       take: limit,
     });
 
-    return topProducts;
+    // Fetch images and price for these products to match frontend requirements
+    const productIds = topProducts.map(tp => tp.productId);
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, price: true, images: { take: 1 } }
+    });
+
+    const productMap = new Map(products.map(p => [p.id, p]));
+
+    return topProducts.map(tp => {
+      const p = productMap.get(tp.productId);
+      return {
+        id: tp.productId,
+        name: tp.productName,
+        price: p ? Number(p.price) : 0,
+        salesCount: tp._sum.quantity || 0,
+        revenue: Number(tp._sum.subtotal || 0),
+        image: p?.images?.[0] || null
+      };
+    });
   }
 
   async getRecentOrders(limit = 10) {
@@ -107,10 +158,10 @@ class AdminService {
     ]);
 
     return {
-      totalProducts,
+      totalItems: totalProducts,
       inStock: totalProducts - outOfStock,
-      outOfStock,
-      lowStock,
+      outOfStockItemsCount: outOfStock,
+      lowStockItemsCount: lowStock,
     };
   }
 
@@ -125,7 +176,7 @@ class AdminService {
         }
       : {};
 
-    return prisma.product.findMany({
+    const products = await prisma.product.findMany({
       where,
       select: {
         id: true,
@@ -134,6 +185,8 @@ class AdminService {
         price: true,
         stockQuantity: true,
         isActive: true,
+        category: { select: { name: true } },
+        images: { take: 1, select: { imageUrl: true } }
       },
       skip: parseInt(skip),
       take: parseInt(take),
@@ -141,20 +194,32 @@ class AdminService {
         stockQuantity: 'asc',
       },
     });
+
+    return products.map(p => ({
+      productId: p.id,
+      name: p.name,
+      category: p.category?.name || 'Uncategorized',
+      stock: p.stockQuantity,
+      status: p.stockQuantity === 0 ? 'Out of Stock' : p.stockQuantity < 10 ? 'Low Stock' : 'In Stock',
+      image: p.images?.[0] || null,
+      sku: p.sku,
+      price: Number(p.price),
+      isActive: p.isActive
+    }));
   }
 
   async updateInventory(productId, data) {
-    const { stockQuantity } = data;
+    const stockQuantity = data.stockQuantity ?? data.stock;
     return prisma.product.update({
       where: { id: productId },
       data: {
-        stockQuantity: parseInt(stockQuantity),
+        stockQuantity: parseInt(stockQuantity) || 0,
       },
     });
   }
 
   async getLowStock(threshold = 10) {
-    return prisma.product.findMany({
+    const lowStockProducts = await prisma.product.findMany({
       where: {
         stockQuantity: {
           lte: threshold,
@@ -165,11 +230,20 @@ class AdminService {
         name: true,
         sku: true,
         stockQuantity: true,
+        images: { take: 1, select: { imageUrl: true } }
       },
       orderBy: {
         stockQuantity: 'asc',
       },
     });
+
+    return lowStockProducts.map(p => ({
+      productId: p.id,
+      name: p.name,
+      stock: p.stockQuantity,
+      image: p.images?.[0] || null,
+      sku: p.sku
+    }));
   }
 }
 

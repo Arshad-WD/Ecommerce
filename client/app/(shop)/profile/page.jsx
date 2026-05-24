@@ -1,17 +1,39 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useShop } from '@/lib/ShopContext';
 import { orders as mockOrders } from '@/lib/mock-data';
 import ProfileSidebar from '@/components/profile/ProfileSidebar';
 import OrderCard from '@/components/profile/OrderCard';
 import { User, ShoppingBag, Heart, MapPin, Settings, Plus, Trash2, Edit, Home, Briefcase, Map } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { formatCurrency } from '@/lib/utils';
 
 export default function ProfilePage() {
-  const { user, wishlist, cart, setUser } = useShop();
+  const { user, wishlist, cart, setUser, loading } = useShop();
   const [activeTab, setActiveTab] = useState('overview');
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/login');
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="font-serif text-sm tracking-widest text-muted uppercase animate-pulse">
+          Loading Bespoke Suite...
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   // Load orders (future API integration point, currently empty for new users)
   const orders = user.orders || [];

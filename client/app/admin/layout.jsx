@@ -1,10 +1,23 @@
 'use client';
+import { useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { ChartLine, Package, Users, Settings, LogOut, ArrowUpRight } from 'lucide-react';
+
+import { useShop } from '@/lib/ShopContext';
 
 export default function AdminLayout({ children }) {
   const pathname = usePathname();
+  const { user, setUser, loading } = useShop();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading) {
+      if (!user || (user.role !== 'Admin' && user.role !== 'ADMIN')) {
+        router.replace('/login');
+      }
+    }
+  }, [user, loading, router]);
 
   const navItems = [
     { name: 'Analytics', href: '/admin', icon: ChartLine },
@@ -12,6 +25,20 @@ export default function AdminLayout({ children }) {
     { name: 'Customers', href: '/admin/customers', icon: Users },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="font-serif text-sm tracking-widest text-muted uppercase animate-pulse">
+          Loading Atelier Portal...
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || (user.role !== 'Admin' && user.role !== 'ADMIN')) {
+    return null;
+  }
 
   return (
     <div className="flex min-h-screen bg-background font-sans">
@@ -57,9 +84,13 @@ export default function AdminLayout({ children }) {
               try {
                 const { authApi } = await import('@/lib/api');
                 await authApi.logout();
-                if (typeof window !== 'undefined') window.location.href = '/login';
               } catch (err) {
                 console.error('Logout failed', err);
+              } finally {
+                setUser(null);
+                if (typeof window !== 'undefined') {
+                  window.location.href = '/login';
+                }
               }
             }}
             className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-muted hover:text-foreground hover:bg-red-50/50 dark:hover:bg-red-950/20 transition-all duration-300 w-full group border border-transparent hover:border-red-100 dark:hover:border-red-900/30"

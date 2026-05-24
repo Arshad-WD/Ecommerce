@@ -114,13 +114,20 @@ export const authApi = {
   },
 
   logout: async () => {
-    if (USE_MOCK) {
-      await simulateNetwork(200);
+    if (typeof window !== 'undefined') {
       localStorage.removeItem('atelier_token');
       localStorage.removeItem('atelier_user');
+    }
+    if (USE_MOCK) {
+      await simulateNetwork(200);
       return { success: true, message: 'Logged out successfully' };
     }
-    return fetcher('/auth/logout', { method: 'POST' });
+    try {
+      return await fetcher('/auth/logout', { method: 'POST' });
+    } catch (err) {
+      console.warn('Backend logout failed, but local session cleared:', err);
+      return { success: true, message: 'Local logout completed' };
+    }
   },
 
   refreshToken: async () => {

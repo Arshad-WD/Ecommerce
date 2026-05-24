@@ -10,7 +10,7 @@ import ThemeToggle from '../shared/ThemeToggle';
 import MegaMenu from './MegaMenu';
 
 export default function Navbar() {
-  const { cart, wishlist, user } = useShop();
+  const { cart, wishlist, user, loading } = useShop();
   const [activeMega, setActiveMega] = useState(null);
   const pathname = usePathname();
 
@@ -104,8 +104,8 @@ export default function Navbar() {
             )}
           </Link>
 
-          {/* Admin Tunnel Accessor */}
-          {(user?.role === 'Admin' || user?.role === 'ADMIN') && (
+          {/* Admin Tunnel Accessor — only shown after session verified AND user is Admin */}
+          {!loading && (user?.role === 'Admin' || user?.role === 'ADMIN') && (
             <Link
               href="/admin"
               className="p-2 text-foreground/80 hover:text-foreground transition-colors hidden sm:block relative"

@@ -1,9 +1,14 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { users as mockUsers } from './mock-data';
 
 const ShopContext = createContext();
+
+// Helper: wipe all auth data from localStorage
+function clearAuthStorage() {
+  localStorage.removeItem('atelier_token');
+  localStorage.removeItem('atelier_user');
+}
 
 export function ShopProvider({ children }) {
   const [cart, setCart] = useState([]);
@@ -11,39 +16,73 @@ export function ShopProvider({ children }) {
   const [couponCode, setCouponCode] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [user, setUser] = useState(mockUsers[0]);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Load cart, wishlist, and user from localStorage on mount
+  // On mount: restore cart/wishlist from localStorage, then VERIFY the session
+  // token against the backend before trusting it. Stale tokens are purged.
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedCart = localStorage.getItem('atelier_cart');
-      const storedWishlist = localStorage.getItem('atelier_wishlist');
-      const storedUser = localStorage.getItem('atelier_user');
-      
-      if (storedCart) {
-        try {
-          setCart(JSON.parse(storedCart));
-        } catch (e) {
-          console.error('Error loading cart', e);
-        }
-      }
-      
-      if (storedWishlist) {
-        try {
-          setWishlist(JSON.parse(storedWishlist));
-        } catch (e) {
-          console.error('Error loading wishlist', e);
-        }
-      }
+    const initSession = async () => {
+      try {
+        const storedCart = localStorage.getItem('atelier_cart');
+        const storedWishlist = localStorage.getItem('atelier_wishlist');
+        const storedToken = localStorage.getItem('atelier_token');
 
-      if (storedUser) {
-        try {
-          setUser(JSON.parse(storedUser));
-        } catch (e) {
-          console.error('Error loading user session', e);
+        if (storedCart) {
+          try { setCart(JSON.parse(storedCart)); } catch (e) { /* ignore */ }
         }
+        if (storedWishlist) {
+          try { setWishlist(JSON.parse(storedWishlist)); } catch (e) { /* ignore */ }
+        }
+
+        // Only attempt session restore if a token exists
+        if (storedToken) {
+          try {
+            const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+            const res = await fetch(`${API_BASE}/auth/me`, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${storedToken}`,
+                'Content-Type': 'application/json',
+              },
+              credentials: 'include',
+            });
+
+            if (res.ok) {
+              const data = await res.json();
+              // Accept both {data: user} and flat user response shapes
+              const verifiedUser = data?.data || data;
+              if (verifiedUser && verifiedUser.id) {
+                // Token is valid — sync localStorage with fresh server data
+                localStorage.setItem('atelier_user', JSON.stringify(verifiedUser));
+                setUser(verifiedUser);
+              } else {
+                // Unexpected response shape — treat as invalid
+                clearAuthStorage();
+              }
+            } else {
+              // 401 or any other error — token is invalid/expired, purge it
+              console.warn('Session token invalid, clearing auth data.');
+              clearAuthStorage();
+            }
+          } catch (networkError) {
+            // Backend unreachable — fail safe: do NOT trust localStorage user
+            console.warn('Could not verify session with backend:', networkError.message);
+            clearAuthStorage();
+          }
+        } else {
+          // No token at all — ensure user data is also cleared (defensive)
+          localStorage.removeItem('atelier_user');
+        }
+      } catch (e) {
+        console.error('Session init error:', e);
+        clearAuthStorage();
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+
+    initSession();
   }, []);
 
   // Save cart changes to localStorage
@@ -166,6 +205,7 @@ export function ShopProvider({ children }) {
         cart,
         wishlist,
         user,
+        loading,
         couponCode,
         discountPercent,
         searchQuery,
