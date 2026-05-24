@@ -134,6 +134,7 @@ class AdminService {
         price: true,
         stockQuantity: true,
         isActive: true,
+        images: true,
       },
       skip: parseInt(skip),
       take: parseInt(take),

@@ -22,13 +22,17 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatCurrency } from '@/lib/utils';
+import Toast from '@/components/shared/Toast';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const { user, sessionLoading, logout } = useShop();
 
   // Active sub-dashboard section tab
-  const [activeTab, setActiveTab] = useState('analytics');
+  const [activeTab, setActiveTab] = useState('inventory');
+
+  // Reusable custom UI notification state
+  const [toast, setToast] = useState({ message: '', type: 'success' });
 
   // API State
   const [analytics, setAnalytics] = useState(null);
@@ -54,7 +58,7 @@ export default function AdminDashboardPage() {
       if (!user) {
         router.push('/admin/login');
       } else if (user.role !== 'ADMIN') {
-        alert('Access Denied: Unrecognized Administrative Privileges.');
+        setToast({ message: 'Access Denied: Unrecognized Administrative Privileges.', type: 'error' });
         router.push('/');
       }
     }
@@ -129,7 +133,7 @@ export default function AdminDashboardPage() {
   const handleUpdateStock = async (productId) => {
     const parsedStock = parseInt(editStockVal);
     if (isNaN(parsedStock) || parsedStock < 0) {
-      alert('Please enter a valid stock quantity.');
+      setToast({ message: 'Please enter a valid stock quantity.', type: 'error' });
       return;
     }
 
@@ -142,12 +146,13 @@ export default function AdminDashboardPage() {
           item.productId === productId ? { ...item, stock: parsedStock, status: parsedStock === 0 ? 'Out of Stock' : parsedStock < 10 ? 'Low Stock' : 'In Stock' } : item
         ));
         setEditingProductId(null);
+        setToast({ message: 'Stock updated successfully.', type: 'success' });
       } else {
-        alert(res.message || 'Failed to update stock.');
+        setToast({ message: res.message || 'Failed to update stock.', type: 'error' });
       }
     } catch (e) {
       console.error('Update stock error:', e);
-      alert('An error occurred while updating stock quantity.');
+      setToast({ message: 'An error occurred while updating stock quantity.', type: 'error' });
     } finally {
       setUpdatingStock(false);
     }
@@ -162,12 +167,13 @@ export default function AdminDashboardPage() {
         setOrders(prev => prev.map(o => 
           o.id === orderId ? { ...o, status: newStatus } : o
         ));
+        setToast({ message: `Order status updated to ${newStatus}.`, type: 'success' });
       } else {
-        alert(res.message || 'Failed to update status.');
+        setToast({ message: res.message || 'Failed to update status.', type: 'error' });
       }
     } catch (e) {
       console.error('Update order error:', e);
-      alert('An error occurred while updating order status.');
+      setToast({ message: 'An error occurred while updating order status.', type: 'error' });
     } finally {
       setUpdatingOrderId(null);
     }
@@ -225,17 +231,7 @@ export default function AdminDashboardPage() {
 
           {/* Menu Sections */}
           <nav className="space-y-1.5">
-            <button
-              onClick={() => setActiveTab('analytics')}
-              className={`w-full flex items-center gap-3 px-4 py-3 text-[10px] uppercase tracking-wider font-bold rounded-xl transition-all ${
-                activeTab === 'analytics'
-                  ? 'bg-[#fafafa] text-[#09090b]'
-                  : 'text-[#a1a1aa] hover:bg-[#18181b] hover:text-[#fafafa]'
-              }`}
-            >
-              <Activity className="w-4 h-4 stroke-[1.5]" />
-              Analytics
-            </button>
+
             <button
               onClick={() => setActiveTab('inventory')}
               className={`w-full flex items-center gap-3 px-4 py-3 text-[10px] uppercase tracking-wider font-bold rounded-xl transition-all ${
@@ -304,7 +300,7 @@ export default function AdminDashboardPage() {
           <div>
             <span className="text-[10px] tracking-[0.25em] font-semibold text-[#a1a1aa] uppercase">Administrative Control Panel</span>
             <h1 className="font-serif text-3xl sm:text-4xl font-light uppercase tracking-wide text-[#fafafa] mt-2">
-              {activeTab === 'analytics' && 'Operational Analytics'}
+
               {activeTab === 'inventory' && 'Garment Inventory'}
               {activeTab === 'orders' && 'Order Registry'}
             </h1>
@@ -326,117 +322,7 @@ export default function AdminDashboardPage() {
 
         {/* DYNAMIC PANE RENDERING */}
         
-        {/* A. ANALYTICS Tab Pane */}
-        {activeTab === 'analytics' && (
-          <div className="space-y-8 animate-fade-in">
-            {/* Overview Stats Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              {/* Sales Metric */}
-              <div className="border border-[#27272a] p-6 rounded-2xl bg-[#09090b] relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-foreground/5 rounded-full blur-3xl group-hover:bg-foreground/10 transition-all" />
-                <div className="flex justify-between items-start">
-                  <span className="text-[9px] uppercase tracking-wider text-[#a1a1aa] font-bold">Total Sales volume</span>
-                  <DollarSign className="w-4 h-4 text-[#a1a1aa] stroke-[1.5]" />
-                </div>
-                <div className="mt-4">
-                  {loadingAnalytics ? (
-                    <span className="text-sm text-[#a1a1aa] animate-pulse">Calculating...</span>
-                  ) : (
-                    <h3 className="font-serif text-3xl font-bold tracking-wide text-[#fafafa]">
-                      {analytics ? formatCurrency(analytics.totalSales) : '$0.00'}
-                    </h3>
-                  )}
-                  <span className="flex items-center gap-1 text-[9px] text-emerald-500 font-bold mt-2">
-                    <TrendingUp className="w-3 h-3" /> +12.5% vs Last Period
-                  </span>
-                </div>
-              </div>
 
-              {/* Orders Metric */}
-              <div className="border border-[#27272a] p-6 rounded-2xl bg-[#09090b] relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-foreground/5 rounded-full blur-3xl group-hover:bg-foreground/10 transition-all" />
-                <div className="flex justify-between items-start">
-                  <span className="text-[9px] uppercase tracking-wider text-[#a1a1aa] font-bold">Total Order Count</span>
-                  <ShoppingBag className="w-4 h-4 text-[#a1a1aa] stroke-[1.5]" />
-                </div>
-                <div className="mt-4">
-                  {loadingAnalytics ? (
-                    <span className="text-sm text-[#a1a1aa] animate-pulse">Calculating...</span>
-                  ) : (
-                    <h3 className="font-serif text-3xl font-bold tracking-wide text-[#fafafa]">
-                      {analytics ? analytics.totalOrders : '0'}
-                    </h3>
-                  )}
-                  <span className="flex items-center gap-1 text-[9px] text-emerald-500 font-bold mt-2">
-                    <TrendingUp className="w-3 h-3" /> +8.2% vs Last Period
-                  </span>
-                </div>
-              </div>
-
-              {/* Users Metric */}
-              <div className="border border-[#27272a] p-6 rounded-2xl bg-[#09090b] relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-foreground/5 rounded-full blur-3xl group-hover:bg-foreground/10 transition-all" />
-                <div className="flex justify-between items-start">
-                  <span className="text-[9px] uppercase tracking-wider text-[#a1a1aa] font-bold">Registered Members</span>
-                  <Users className="w-4 h-4 text-[#a1a1aa] stroke-[1.5]" />
-                </div>
-                <div className="mt-4">
-                  {loadingAnalytics ? (
-                    <span className="text-sm text-[#a1a1aa] animate-pulse">Calculating...</span>
-                  ) : (
-                    <h3 className="font-serif text-3xl font-bold tracking-wide text-[#fafafa]">
-                      {analytics ? analytics.totalUsers : '0'}
-                    </h3>
-                  )}
-                  <span className="flex items-center gap-1 text-[9px] text-emerald-500 font-bold mt-2">
-                    <TrendingUp className="w-3 h-3" /> +15.4% vs Last Period
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Sales Chart Simulator / Table Logs */}
-            <div className="border border-[#27272a] p-6 rounded-2xl bg-[#09090b] space-y-4">
-              <div className="flex justify-between items-center border-b border-[#27272a] pb-4">
-                <h3 className="font-serif text-lg font-semibold uppercase text-[#fafafa]">Performance Trends (7 Days)</h3>
-                <span className="text-[9px] tracking-widest text-[#a1a1aa] font-bold uppercase">Real-Time Data Feed</span>
-              </div>
-              
-              {loadingSales ? (
-                <div className="py-12 text-center text-xs text-[#a1a1aa] font-serif italic">Loading trends...</div>
-              ) : salesData && salesData.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-[#27272a] text-[#a1a1aa] font-bold uppercase tracking-wider">
-                        <th className="pb-3">Placement Date</th>
-                        <th className="pb-3">Daily Sales Total</th>
-                        <th className="pb-3">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#27272a] text-[#fafafa]/80 font-medium">
-                      {salesData.map((day, idx) => (
-                        <tr key={idx} className="hover:bg-[#18181b]/35 transition-colors">
-                          <td className="py-3.5 font-mono">{formatDate(day.placedAt)}</td>
-                          <td className="py-3.5 font-semibold text-[#fafafa]">{formatCurrency(day.totalAmount)}</td>
-                          <td className="py-3.5">
-                            <span className="px-2 py-0.5 border border-emerald-950 text-emerald-400 text-[8px] font-bold uppercase rounded-lg bg-emerald-950/20">
-                              Reconciled
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="py-12 text-center text-xs text-[#a1a1aa] font-medium leading-relaxed">
-                  No sales analytics logged in the database yet. Place some orders to populate live trends!
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* B. INVENTORY Tab Pane */}
         {activeTab === 'inventory' && (
@@ -469,7 +355,7 @@ export default function AdminDashboardPage() {
                     </thead>
                     <tbody className="divide-y divide-[#27272a] text-[#fafafa]/80 font-medium">
                       {inventory.map((prod) => (
-                        <tr key={prod.productId} className="hover:bg-[#18181b]/35 transition-colors">
+                        <tr key={prod.productId || prod.id} className="hover:bg-[#18181b]/35 transition-colors">
                           {/* Image & name */}
                           <td className="p-4 pl-6 flex items-center gap-3">
                             <div className="w-10 h-12 bg-[#18181b] rounded-lg overflow-hidden shrink-0 border border-[#27272a]/30">
@@ -629,6 +515,13 @@ export default function AdminDashboardPage() {
           </div>
         )}
       </main>
+
+      {/* Reusable Toast Notifications */}
+      <Toast 
+        message={toast.message} 
+        type={toast.type} 
+        onClose={() => setToast({ message: '', type: 'success' })} 
+      />
     </div>
   );
 }

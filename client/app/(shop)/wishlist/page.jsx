@@ -82,7 +82,7 @@ export default function WishlistPage() {
               <div className="aspect-[3/4] relative w-full overflow-hidden rounded-xl bg-secondary mb-4">
                 <Link href={`/product/${prod.slug}`}>
                   <img
-                    src={prod.images[0]}
+                    src={typeof prod.images[0] === 'string' ? prod.images[0] : (prod.images[0]?.imageUrl || prod.images[0]?.url)}
                     alt={prod.name}
                     className="w-full h-full object-cover object-center group-hover:scale-102 transition-transform duration-500"
                   />

@@ -5,6 +5,7 @@ import AuthSplitLayout from '@/components/auth/AuthSplitLayout';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useShop } from '@/lib/ShopContext';
+import Toast from '@/components/shared/Toast';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [toast, setToast] = useState({ message: '', type: 'success' });
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
@@ -160,8 +162,8 @@ export default function RegisterPage() {
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => {
-              alert('Registering via Google auth...');
-              router.push('/profile');
+              setToast({ message: 'Registering via Google auth simulation...', type: 'success' });
+              setTimeout(() => router.push('/profile'), 1500);
             }}
             className="py-3 border border-border rounded-xl text-[10px] font-bold tracking-widest uppercase hover:bg-secondary transition-colors"
           >
@@ -169,8 +171,8 @@ export default function RegisterPage() {
           </button>
           <button
             onClick={() => {
-              alert('Registering via Apple Pay ID...');
-              router.push('/profile');
+              setToast({ message: 'Registering via Apple Pay ID simulation...', type: 'success' });
+              setTimeout(() => router.push('/profile'), 1500);
             }}
             className="py-3 border border-border rounded-xl text-[10px] font-bold tracking-widest uppercase hover:bg-secondary transition-colors"
           >
@@ -186,6 +188,13 @@ export default function RegisterPage() {
           </Link>
         </p>
       </div>
+
+      {/* Reusable Toast Notifications */}
+      <Toast 
+        message={toast.message} 
+        type={toast.type} 
+        onClose={() => setToast({ message: '', type: 'success' })} 
+      />
     </AuthSplitLayout>
   );
 }

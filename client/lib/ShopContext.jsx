@@ -168,7 +168,7 @@ export function ShopProvider({ children }) {
         size,
         color,
         quantity,
-        image: product.images ? product.images[0] : '',
+        image: product.images ? (typeof product.images[0] === 'string' ? product.images[0] : (product.images[0]?.imageUrl || product.images[0]?.url)) : '',
         category: product.category,
       };
       updatedCart.push(cartItem);

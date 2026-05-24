@@ -9,11 +9,13 @@ import BentoGrid from '@/components/home/BentoGrid';
 import TestimonialCard from '@/components/home/TestimonialCard';
 import { ArrowRight, Mail } from 'lucide-react';
 import Link from 'next/link';
+import Toast from '@/components/shared/Toast';
 
 export default function HomePage() {
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [categoriesList, setCategoriesList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState({ message: '', type: 'success' });
 
   useEffect(() => {
     import('@/lib/api').then(({ productApi }) => {
@@ -32,7 +34,7 @@ export default function HomePage() {
 
   const handleSubscribe = (e) => {
     e.preventDefault();
-    alert('Thank you. You have been added to the Atelier list.');
+    setToast({ message: 'Thank you. You have been added to the Atelier list.', type: 'success' });
     e.target.reset();
   };
 
@@ -170,6 +172,12 @@ export default function HomePage() {
           </form>
         </div>
       </section>
-    </div>
-  );
+    {/* Reusable Toast Notifications */}
+    <Toast 
+      message={toast.message} 
+      type={toast.type} 
+      onClose={() => setToast({ message: '', type: 'success' })} 
+    />
+  </div>
+);
 }

@@ -14,7 +14,7 @@ export default function ProductGallery({ images = [], productName }) {
       {/* 1. Large Showcase Screen */}
       <div className="aspect-[3/4] w-full relative rounded-xl overflow-hidden bg-secondary select-none">
         <img
-          src={images[activeIndex]}
+          src={typeof images[activeIndex] === 'string' ? images[activeIndex] : (images[activeIndex]?.imageUrl || images[activeIndex]?.url)}
           alt={`${productName} angle showcase`}
           className="w-full h-full object-cover object-center transition-all duration-500"
         />
@@ -36,7 +36,7 @@ export default function ProductGallery({ images = [], productName }) {
             aria-label={`Showcase image angle ${idx + 1}`}
           >
             <img
-              src={img}
+              src={typeof img === 'string' ? img : (img?.imageUrl || img?.url)}
               alt={`${productName} thumbnail ${idx + 1}`}
               className="w-full h-full object-cover object-center"
             />

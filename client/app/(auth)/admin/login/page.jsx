@@ -4,6 +4,7 @@ import { useState } from 'react';
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout';
 import { useRouter } from 'next/navigation';
 import { authApi } from '@/lib/api';
+import Toast from '@/components/shared/Toast';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -11,6 +12,7 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState({ message: '', type: 'success' });
 
   const handleAdminSubmit = async (e) => {
     e.preventDefault();
@@ -21,8 +23,8 @@ export default function AdminLoginPage() {
       const res = await authApi.login({ email, password });
       if (res.success && res.user) {
         if (res.user.role === 'ADMIN') {
-          alert('Administrative Access Granted. Initializing Command Panel.');
-          router.push('/admin');
+          setToast({ message: 'Administrative Access Granted. Initializing Command Panel.', type: 'success' });
+          setTimeout(() => router.push('/admin'), 1500);
         } else {
           setError('Access Denied: Unrecognized administrative credentials.');
         }
@@ -118,6 +120,13 @@ export default function AdminLoginPage() {
           </p>
         </div>
       </div>
+
+      {/* Reusable Toast Notifications */}
+      <Toast 
+        message={toast.message} 
+        type={toast.type} 
+        onClose={() => setToast({ message: '', type: 'success' })} 
+      />
     </AuthSplitLayout>
   );
 }

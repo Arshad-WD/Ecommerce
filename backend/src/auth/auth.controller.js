@@ -90,27 +90,15 @@ class AuthController {
     }
   }
 
-<<<<<<< HEAD
-    async forgetPassword(req, res, next) {
-        try {
-            const result = 
-                await authService.forgotPassword(
-                    req.body.email
-                );
-
-                res.status(200).json({
-                    success: true,
-                    message: 'Reset token generated',
-                    data: result,
-                });
-        }catch (error) {
-=======
   async forgetPassword(req, res, next) {
     try {
-      const result = await authService.forgetPassword(req.body.email);
-      res.status(200).json({ success: true, message: 'Reset token generated', data: result });
+      const result = await authService.forgotPassword(req.body.email);
+      res.status(200).json({
+        success: true,
+        message: 'Reset token generated',
+        data: result,
+      });
     } catch (error) {
->>>>>>> origin/main
       next(error);
     }
   }

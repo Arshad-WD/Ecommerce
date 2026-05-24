@@ -71,7 +71,7 @@ class CheckoutService {
                 billingAddressId:
                   shippingAddress.id,
 
-                status: OrderStatus.PENDING,
+                status: OrderStatus.PROCESSING,
 
                 paymentStatus:
                   OrderStatus.PENDING,

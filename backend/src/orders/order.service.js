@@ -18,7 +18,7 @@ class OrderService {
       },
 
       orderBy: {
-        createdAt: 'desc',
+        placedAt: 'desc',
       },
     });
   }
@@ -62,10 +62,12 @@ class OrderService {
         items: true,
 
         payments: true,
+
+        shippingAddress: true,
       },
 
       orderBy: {
-        createdAt: 'desc',
+        placedAt: 'desc',
       },
     });
   }

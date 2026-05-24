@@ -10,6 +10,7 @@ import { formatCurrency } from '@/lib/utils';
 import { Heart, ShoppingBag, Star, ArrowLeft, Minus, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { productApi } from '@/lib/api';
+import Toast from '@/components/shared/Toast';
 
 export default function ProductDetailsPage() {
   const params = useParams();
@@ -24,6 +25,7 @@ export default function ProductDetailsPage() {
   const [addedNotification, setAddedNotification] = useState(false);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [productReviews, setProductReviews] = useState([]);
+  const [toast, setToast] = useState({ message: '', type: 'success' });
 
   useEffect(() => {
     let active = true;
@@ -203,7 +205,7 @@ export default function ProductDetailsPage() {
                 Size: <span className="text-foreground">{selectedSize}</span>
               </span>
               <button
-                onClick={() => alert('Sizing chart: Standard athletic luxury silhouettes.')}
+                onClick={() => setToast({ message: 'Sizing chart: Standard athletic luxury silhouettes.', type: 'success' })}
                 className="text-[10px] uppercase tracking-widest text-muted hover:text-foreground underline font-bold"
               >
                 Size Guide
@@ -379,6 +381,12 @@ export default function ProductDetailsPage() {
         </button>
       </div>
 
-    </div>
-  );
+    {/* Reusable Toast Notifications */}
+    <Toast 
+      message={toast.message} 
+      type={toast.type} 
+      onClose={() => setToast({ message: '', type: 'success' })} 
+    />
+  </div>
+);
 }

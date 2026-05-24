@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useShop } from '@/lib/ShopContext';
 import ProfileSidebar from '@/components/profile/ProfileSidebar';
 import OrderCard from '@/components/profile/OrderCard';
-import { Plus, Trash2, Edit } from 'lucide-react';
+import { Plus, Trash2, Edit, Home, Briefcase, Map } from 'lucide-react';
 import Link from 'next/link';
+import Toast from '@/components/shared/Toast';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -14,9 +15,11 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [ordersList, setOrdersList] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [toast, setToast] = useState({ message: '', type: 'success' });
+  const [editingAddressId, setEditingAddressId] = useState(null);
 
   // Load orders (future API integration point, currently empty for new users)
-  const orders = user.orders || [];
+  const orders = user?.orders || [];
 
   // Address simulation state
   const [addresses, setAddresses] = useState([]);
@@ -92,38 +95,142 @@ export default function ProfilePage() {
       });
       if (res.success && res.user) {
         setUser(res.user);
-        alert('Account settings updated successfully.');
+        localStorage.setItem('atelier_user', JSON.stringify(res.user));
+        setToast({ message: 'Account settings updated successfully.', type: 'success' });
       } else {
-        alert(res.message || 'Failed to update settings.');
+        setToast({ message: res.message || 'Failed to update settings.', type: 'error' });
       }
     } catch (err) {
       console.error(err);
-      alert('An error occurred while updating settings.');
+      setToast({ message: 'An error occurred while updating settings.', type: 'error' });
     }
   };
 
-  const handleAddAddress = (e) => {
+  const handleAddAddress = async (e) => {
     e.preventDefault();
     if (!newAddress.addressLine1 || !newAddress.city || !newAddress.fullName) return;
 
-    const addressRecord = {
-      id: `addr-${Date.now()}`,
-      ...newAddress,
-      isDefault: addresses.length === 0,
-    };
+    try {
+      const { addressApi } = await import('@/lib/api');
+      if (editingAddressId) {
+        const res = await addressApi.updateAddress(editingAddressId, {
+          fullName: newAddress.fullName,
+          mobileNumber: newAddress.mobileNumber,
+          addressLine1: newAddress.addressLine1,
+          addressLine2: newAddress.addressLine2 || null,
+          landmark: newAddress.landmark || null,
+          city: newAddress.city,
+          state: newAddress.state,
+          country: newAddress.country,
+          postalCode: newAddress.postalCode,
+          addressType: newAddress.addressType || 'HOME',
+          isDefault: newAddress.isDefault,
+        });
 
-    const updated = [...addresses, addressRecord];
-    setAddresses(updated);
-    setUser({ ...user, addresses: updated });
-    
-    setNewAddress({ fullName: '', mobileNumber: '', addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', postalCode: '', country: '', addressType: 'HOME', isDefault: false });
-    setShowAddressForm(false);
+        if (res.success) {
+          const updated = addresses.map(addr => addr.id === editingAddressId ? { ...addr, ...newAddress, id: editingAddressId } : addr);
+          setAddresses(updated);
+          setUser({ ...user, addresses: updated });
+          localStorage.setItem('atelier_user', JSON.stringify({ ...user, addresses: updated }));
+          
+          setNewAddress({ fullName: '', mobileNumber: '', addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', postalCode: '', country: '', addressType: 'HOME', isDefault: false });
+          setEditingAddressId(null);
+          setShowAddressForm(false);
+          setToast({ message: 'Address successfully updated in your profile.', type: 'success' });
+        } else {
+          setToast({ message: res.message || 'Failed to update address.', type: 'error' });
+        }
+      } else {
+        const res = await addressApi.createAddress({
+          fullName: newAddress.fullName,
+          mobileNumber: newAddress.mobileNumber,
+          addressLine1: newAddress.addressLine1,
+          addressLine2: newAddress.addressLine2 || null,
+          landmark: newAddress.landmark || null,
+          city: newAddress.city,
+          state: newAddress.state,
+          country: newAddress.country,
+          postalCode: newAddress.postalCode,
+          addressType: newAddress.addressType || 'HOME',
+          isDefault: addresses.length === 0 ? true : !!newAddress.isDefault,
+        });
+
+        if (res.success && res.data) {
+          const updated = [...addresses, res.data];
+          setAddresses(updated);
+          setUser({ ...user, addresses: updated });
+          localStorage.setItem('atelier_user', JSON.stringify({ ...user, addresses: updated }));
+          
+          setNewAddress({ fullName: '', mobileNumber: '', addressLine1: '', addressLine2: '', landmark: '', city: '', state: '', postalCode: '', country: '', addressType: 'HOME', isDefault: false });
+          setShowAddressForm(false);
+          setToast({ message: 'Address successfully added to your profile.', type: 'success' });
+        } else {
+          setToast({ message: res.message || 'Failed to add address.', type: 'error' });
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      setToast({ message: 'An error occurred while saving address.', type: 'error' });
+    }
   };
 
-  const handleDeleteAddress = (id) => {
-    const updated = addresses.filter((addr) => addr.id !== id);
-    setAddresses(updated);
-    setUser({ ...user, addresses: updated });
+  const handleDeleteAddress = async (id) => {
+    try {
+      const { addressApi } = await import('@/lib/api');
+      const res = await addressApi.deleteAddress(id);
+      if (res.success) {
+        const updated = addresses.filter((addr) => addr.id !== id);
+        setAddresses(updated);
+        setUser({ ...user, addresses: updated });
+        localStorage.setItem('atelier_user', JSON.stringify({ ...user, addresses: updated }));
+        setToast({ message: 'Address successfully deleted from your profile.', type: 'success' });
+      } else {
+        setToast({ message: res.message || 'Failed to delete address.', type: 'error' });
+      }
+    } catch (err) {
+      console.error(err);
+      setToast({ message: 'An error occurred while deleting address.', type: 'error' });
+    }
+  };
+
+  const handleSetDefaultAddress = async (id) => {
+    try {
+      const { addressApi } = await import('@/lib/api');
+      const res = await addressApi.setDefaultAddress(id);
+      if (res.success) {
+        const updated = addresses.map((addr) => ({
+          ...addr,
+          isDefault: addr.id === id
+        }));
+        setAddresses(updated);
+        setUser({ ...user, addresses: updated });
+        localStorage.setItem('atelier_user', JSON.stringify({ ...user, addresses: updated }));
+        setToast({ message: 'Default address updated successfully.', type: 'success' });
+      } else {
+        setToast({ message: res.message || 'Failed to update default address.', type: 'error' });
+      }
+    } catch (err) {
+      console.error(err);
+      setToast({ message: 'An error occurred while updating default address.', type: 'error' });
+    }
+  };
+
+  const handleStartEditAddress = (addr) => {
+    setNewAddress({
+      fullName: addr.fullName,
+      mobileNumber: addr.mobileNumber,
+      addressLine1: addr.addressLine1,
+      addressLine2: addr.addressLine2 || '',
+      landmark: addr.landmark || '',
+      city: addr.city,
+      state: addr.state,
+      postalCode: addr.postalCode,
+      country: addr.country,
+      addressType: addr.addressType,
+      isDefault: addr.isDefault,
+    });
+    setEditingAddressId(addr.id);
+    setShowAddressForm(true);
   };
 
   // Map backend order to OrderCard properties
@@ -462,8 +569,16 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   <div className="flex gap-3 justify-end mt-6 pt-4 border-t border-border/40 text-[9px] uppercase tracking-widest font-bold text-muted">
+                    {!addr.isDefault && (
+                      <button
+                        onClick={() => handleSetDefaultAddress(addr.id)}
+                        className="hover:text-foreground mr-auto transition-colors"
+                      >
+                        Set Default
+                      </button>
+                    )}
                     <button
-                      onClick={() => alert('Editing addresses disabled in prototype.')}
+                      onClick={() => handleStartEditAddress(addr)}
                       className="hover:text-foreground flex items-center gap-1 transition-colors"
                     >
                       <Edit className="w-3.5 h-3.5 stroke-[1.5]" /> Edit
@@ -567,6 +682,13 @@ export default function ProfilePage() {
         <div className="flex-1 min-w-0">{renderTabContent()}</div>
 
       </div>
+
+      {/* Reusable Toast Notifications */}
+      <Toast 
+        message={toast.message} 
+        type={toast.type} 
+        onClose={() => setToast({ message: '', type: 'success' })} 
+      />
     </div>
   );
 }

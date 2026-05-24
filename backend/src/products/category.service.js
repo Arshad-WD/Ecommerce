@@ -33,10 +33,12 @@ class CategoryService {
   }
 
   async createCategory(data) {
+    const slug = data.slug || data.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    
     const existingCategory =
       await prisma.category.findUnique({
         where: {
-          slug: data.slug,
+          slug,
         },
       });
 
@@ -48,7 +50,7 @@ class CategoryService {
       await prisma.category.create({
         data: {
           name: data.name,
-          slug: data.slug,
+          slug,
         },
       });
 

@@ -83,26 +83,12 @@ class ProductService {
     };
   }
 
-<<<<<<< HEAD
-
-  async getProductById(idOrSlug) {
-    const product =
-      await prisma.product.findFirst({
-        where: {
-          OR: [
-            { id: idOrSlug },
-            { slug: idOrSlug },
-          ],
-        },
-
-=======
   async getProductById(idOrSlug) {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
     
     const product =
       await prisma.product.findFirst({
         where: isUuid ? { id: idOrSlug } : { slug: idOrSlug },
->>>>>>> origin/main
         include: {
           images: true,
           category: true,
@@ -127,27 +113,35 @@ class ProductService {
   }
 
   async createProduct(data) {
+    let slug = data.slug;
+    const existingProduct = await prisma.product.findUnique({
+      where: { slug },
+    });
+
+    if (existingProduct) {
+      slug = `${slug}-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
+
+    let sku = data.sku;
+    const existingSku = await prisma.product.findUnique({
+      where: { sku },
+    });
+
+    if (existingSku) {
+      sku = `${sku}-${Math.floor(100 + Math.random() * 900)}`;
+    }
+
     const product =
       await prisma.product.create({
         data: {
           name: data.name,
-
-          slug: data.slug,
-
+          slug,
           description: data.description,
-
           price: data.price,
-
-          discountPrice:
-            data.discountPrice,
-
-          stockQuantity:
-            data.stockQuantity,
-
-          sku: data.sku,
-
-          categoryId:
-            data.categoryId,
+          discountPrice: data.discountPrice,
+          stockQuantity: data.stockQuantity,
+          sku,
+          categoryId: data.categoryId,
         },
       });
 
@@ -155,12 +149,41 @@ class ProductService {
   }
 
   async updateProduct(id, data) {
+    if (data.slug) {
+      const existingProduct = await prisma.product.findFirst({
+        where: {
+          slug: data.slug,
+          NOT: {
+            id,
+          },
+        },
+      });
+
+      if (existingProduct) {
+        data.slug = `${data.slug}-${Math.floor(1000 + Math.random() * 9000)}`;
+      }
+    }
+
+    if (data.sku) {
+      const existingSku = await prisma.product.findFirst({
+        where: {
+          sku: data.sku,
+          NOT: {
+            id,
+          },
+        },
+      });
+
+      if (existingSku) {
+        data.sku = `${data.sku}-${Math.floor(100 + Math.random() * 900)}`;
+      }
+    }
+
     const product =
       await prisma.product.update({
         where: {
           id,
         },
-
         data,
       });
 
@@ -168,11 +191,28 @@ class ProductService {
   }
 
   async deleteProduct(id) {
-    await prisma.product.delete({
+    // 1. Check if product is bound to active customer orders
+    const orderItemsCount = await prisma.orderItem.count({
       where: {
-        id,
+        productId: id,
       },
     });
+
+    if (orderItemsCount > 0) {
+      // 2. Soft-delete to preserve billing records & foreign key integrity
+      await prisma.product.update({
+        where: { id },
+        data: { isActive: false },
+      });
+    } else {
+      // 3. Complete hard-delete safely clearing child review/cart nodes first
+      await prisma.review.deleteMany({ where: { productId: id } });
+      await prisma.cartItem.deleteMany({ where: { productId: id } });
+      await prisma.productImage.deleteMany({ where: { productId: id } });
+      await prisma.product.delete({
+        where: { id },
+      });
+    }
 
     return true;
   }

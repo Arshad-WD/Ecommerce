@@ -5,6 +5,7 @@ import AuthSplitLayout from '@/components/auth/AuthSplitLayout';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useShop } from '@/lib/ShopContext';
+import Toast from '@/components/shared/Toast';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [toast, setToast] = useState({ message: '', type: 'success' });
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
@@ -86,7 +88,7 @@ export default function LoginPage() {
               </label>
               <button
                 type="button"
-                onClick={() => alert('Demo Mode: Password resets disabled.')}
+                onClick={() => setToast({ message: 'Demo Mode: Password resets are disabled.', type: 'error' })}
                 className="text-[9px] uppercase tracking-widest text-muted hover:text-foreground font-bold underline"
               >
                 Forgot?
@@ -127,8 +129,8 @@ export default function LoginPage() {
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => {
-              alert('Redirecting to Google authenticator...');
-              router.push('/profile');
+              setToast({ message: 'Redirecting to Google authenticator...', type: 'success' });
+              setTimeout(() => router.push('/profile'), 1500);
             }}
             className="py-3 border border-border rounded-xl text-[10px] font-bold tracking-widest uppercase hover:bg-secondary transition-colors"
           >
@@ -136,8 +138,8 @@ export default function LoginPage() {
           </button>
           <button
             onClick={() => {
-              alert('Redirecting to Apple ID authenticator...');
-              router.push('/profile');
+              setToast({ message: 'Redirecting to Apple ID authenticator...', type: 'success' });
+              setTimeout(() => router.push('/profile'), 1500);
             }}
             className="py-3 border border-border rounded-xl text-[10px] font-bold tracking-widest uppercase hover:bg-secondary transition-colors"
           >
@@ -153,6 +155,13 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
+
+      {/* Reusable Toast Notifications */}
+      <Toast 
+        message={toast.message} 
+        type={toast.type} 
+        onClose={() => setToast({ message: '', type: 'success' })} 
+      />
     </AuthSplitLayout>
   );
 }

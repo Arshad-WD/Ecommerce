@@ -51,21 +51,8 @@ export default function ProfileSidebar({ activeTab, setActiveTab }) {
           );
         })}
         
-        {/* Working Logout option */}
         <button
-<<<<<<< HEAD
           onClick={logout}
-=======
-          onClick={async () => {
-            try {
-              const { authApi } = await import('@/lib/api');
-              await authApi.logout();
-              if (typeof window !== 'undefined') window.location.href = '/login';
-            } catch (err) {
-              console.error('Logout failed', err);
-            }
-          }}
->>>>>>> origin/main
           className="flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider font-bold text-neutral-400 hover:text-neutral-950 dark:hover:text-white rounded-xl shrink-0 mt-auto transition-colors"
         >
           <LogOut className="w-4 h-4 stroke-[1.5]" />

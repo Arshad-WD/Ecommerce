@@ -318,7 +318,7 @@ export const productApi = {
       const mappedProducts = res.data.products.map(p => ({
         ...p,
         category: p.category ? p.category.slug : p.categoryId,
-        images: p.images && p.images.length > 0 ? p.images.map(img => img.imageUrl) : ['https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=1000'],
+        images: p.images && p.images.length > 0 ? p.images : [{ id: 'mock-1', imageUrl: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=1000' }],
         sizes: p.sizes || ['XS', 'S', 'M', 'L', 'XL'],
         colors: p.colors || ['Black', 'Off-White', 'Cream', 'Charcoal'],
         rating: p.rating || 5.0,
@@ -350,7 +350,7 @@ export const productApi = {
       return {
         ...p,
         category: p.category ? p.category.slug : p.categoryId,
-        images: p.images && p.images.length > 0 ? p.images.map(img => img.imageUrl) : ['https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=1000'],
+        images: p.images && p.images.length > 0 ? p.images : [{ id: 'mock-1', imageUrl: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=1000' }],
         sizes: p.sizes || ['XS', 'S', 'M', 'L', 'XL'],
         colors: p.colors || ['Black', 'Off-White', 'Cream', 'Charcoal'],
         rating: p.rating || 5.0,
@@ -378,6 +378,18 @@ export const productApi = {
       }));
     }
     return res;
+  },
+
+  createCategory: async (categoryName) => {
+    if (USE_MOCK) {
+      await simulateNetwork(200);
+      return { id: `cat-${Date.now()}`, name: categoryName, slug: categoryName.toLowerCase().replace(/ /g, '-') };
+    }
+    const res = await fetcher('/products/categories', {
+      method: 'POST',
+      body: JSON.stringify({ name: categoryName }),
+    });
+    return res.data || res;
   },
 
   // Admin CRUD Operations
@@ -732,7 +744,17 @@ export const inventoryApi = {
         image: p.images[0],
       }));
     }
-    return fetcher('/admin/inventory');
+    const res = await fetcher('/admin/inventory');
+    const items = res.data || res || [];
+    return items.map(p => ({
+      productId: p.id,
+      name: p.name,
+      sku: p.sku || '',
+      price: p.price || 0,
+      stock: p.stockQuantity ?? 0,
+      status: (p.stockQuantity ?? 0) === 0 ? 'Out of Stock' : (p.stockQuantity ?? 0) < 10 ? 'Low Stock' : 'In Stock',
+      image: p.images && p.images.length > 0 ? (p.images[0]?.imageUrl || p.images[0]?.url) : 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=600&q=80',
+    }));
   },
 
   updateInventoryStock: async (productId, stock) => {
@@ -759,3 +781,96 @@ export const inventoryApi = {
     return fetcher('/admin/inventory/low-stock');
   },
 };
+
+// 8. ADDRESS APIs
+export const addressApi = {
+  getAddresses: async () => {
+    if (USE_MOCK) {
+      await simulateNetwork(150);
+      const userStr = localStorage.getItem('atelier_user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      return { success: true, data: user?.addresses || [] };
+    }
+    return fetcher('/addresses');
+  },
+
+  createAddress: async (addressData) => {
+    if (USE_MOCK) {
+      await simulateNetwork(200);
+      const userStr = localStorage.getItem('atelier_user');
+      if (!userStr) throw new Error('Unauthenticated');
+      const user = JSON.parse(userStr);
+      
+      const newAddress = {
+        id: `addr-${Date.now()}`,
+        ...addressData,
+        isDefault: user.addresses.length === 0 ? true : !!addressData.isDefault
+      };
+      
+      const updatedAddresses = [...user.addresses, newAddress];
+      const updatedUser = { ...user, addresses: updatedAddresses };
+      localStorage.setItem('atelier_user', JSON.stringify(updatedUser));
+      return { success: true, data: newAddress };
+    }
+    return fetcher('/addresses', {
+      method: 'POST',
+      body: JSON.stringify(addressData),
+    });
+  },
+
+  updateAddress: async (id, addressData) => {
+    if (USE_MOCK) {
+      await simulateNetwork(200);
+      const userStr = localStorage.getItem('atelier_user');
+      if (!userStr) throw new Error('Unauthenticated');
+      const user = JSON.parse(userStr);
+      
+      const updatedAddresses = user.addresses.map(a => a.id === id ? { ...a, ...addressData } : a);
+      const updatedUser = { ...user, addresses: updatedAddresses };
+      localStorage.setItem('atelier_user', JSON.stringify(updatedUser));
+      return { success: true };
+    }
+    return fetcher(`/addresses/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(addressData),
+    });
+  },
+
+  deleteAddress: async (id) => {
+    if (USE_MOCK) {
+      await simulateNetwork(150);
+      const userStr = localStorage.getItem('atelier_user');
+      if (!userStr) throw new Error('Unauthenticated');
+      const user = JSON.parse(userStr);
+      
+      const updatedAddresses = user.addresses.filter(a => a.id !== id);
+      const updatedUser = { ...user, addresses: updatedAddresses };
+      localStorage.setItem('atelier_user', JSON.stringify(updatedUser));
+      return { success: true };
+    }
+    return fetcher(`/addresses/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  setDefaultAddress: async (id) => {
+    if (USE_MOCK) {
+      await simulateNetwork(150);
+      const userStr = localStorage.getItem('atelier_user');
+      if (!userStr) throw new Error('Unauthenticated');
+      const user = JSON.parse(userStr);
+      
+      const updatedAddresses = user.addresses.map(a => ({
+        ...a,
+        isDefault: a.id === id
+      }));
+      const updatedUser = { ...user, addresses: updatedAddresses };
+      localStorage.setItem('atelier_user', JSON.stringify(updatedUser));
+      return { success: true };
+    }
+    return fetcher(`/addresses/${id}/default`, {
+      method: 'PATCH',
+    });
+  }
+};
+
