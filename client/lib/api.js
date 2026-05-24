@@ -362,12 +362,23 @@ export const productApi = {
     }
     const res = await fetcher('/products/categories');
     if (res.success && res.data) {
+      const categoryImageMap = {
+        essentials: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=800',
+        outerwear: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&q=80&w=800',
+        tailoring: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&q=80&w=800',
+        knitwear: 'https://images.unsplash.com/photo-1614975058789-41316d0e2e9c?auto=format&fit=crop&q=80&w=800',
+        accessories: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=800',
+        footwear: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&q=80&w=800',
+        denim: 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?auto=format&fit=crop&q=80&w=800',
+        formalwear: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&q=80&w=800'
+      };
+
       return res.data.map(cat => ({
         id: cat.id,
         name: cat.name,
         slug: cat.slug,
-        count: cat._count?.products || 10,
-        image: cat.image || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=800'
+        count: cat._count?.products ?? 0,
+        image: cat.image || categoryImageMap[cat.slug] || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=800'
       }));
     }
     return res;

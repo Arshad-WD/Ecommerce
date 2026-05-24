@@ -106,6 +106,10 @@ class AuthService {
             },
         });
 
+        if (!user) {
+            throw new AppError('User not found', 401);
+        }
+
         return user;
     }
 
