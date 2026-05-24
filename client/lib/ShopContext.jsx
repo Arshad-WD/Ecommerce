@@ -306,11 +306,7 @@ export function ShopProvider({ children }) {
         cart,
         wishlist,
         user,
-<<<<<<< HEAD
-        loading,
-=======
         sessionLoading,
->>>>>>> tauqeer
         couponCode,
         discountPercent,
         searchQuery,
