@@ -49,7 +49,7 @@ async function tryRefreshToken() {
 async function fetcher(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
   const headers = { ...getAuthHeaders(), ...options.headers };
-  let response = await fetch(url, { ...options, headers, credentials: 'include' });
+  let response = await fetch(url, { ...options, headers, credentials: 'include' }); 
 
   // On 401, try refresh and retry once
   if (response.status === 401) {
