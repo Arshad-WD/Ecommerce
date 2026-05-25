@@ -82,6 +82,7 @@ class AdminService {
           select: {
             name: true,
             email: true,
+            mobileNumber: true,
           },
         },
       },

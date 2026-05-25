@@ -56,6 +56,7 @@ class OrderService {
             id: true,
             name: true,
             email: true,
+            mobileNumber: true,
           },
         },
 
