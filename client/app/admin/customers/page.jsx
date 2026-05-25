@@ -142,7 +142,10 @@ export default function CustomersPage() {
                       </div>
                       <div>
                         <div className="font-semibold text-foreground tracking-wide text-sm">{u.name}</div>
-                        <div className="text-[10px] text-muted mt-0.5 md:hidden">{u.email}</div>
+                        <div className="text-[10px] text-muted mt-0.5 md:hidden">
+                          <div>{u.email}</div>
+                          {u.mobileNumber && <div className="text-neutral-400 font-mono mt-0.5">{u.mobileNumber}</div>}
+                        </div>
                         <div className="text-[10px] text-muted/70 mt-0.5">
                           Joined {new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                         </div>
@@ -150,7 +153,14 @@ export default function CustomersPage() {
                     </div>
                   </td>
                   {/* Email */}
-                  <td className="px-6 py-4 text-muted text-xs tracking-wide hidden md:table-cell">{u.email}</td>
+                  <td className="px-6 py-4 hidden md:table-cell">
+                    <div className="flex flex-col text-xs tracking-wide">
+                      <span className="text-muted">{u.email}</span>
+                      {u.mobileNumber && (
+                        <span className="text-neutral-400 text-[10px] font-mono mt-0.5">{u.mobileNumber}</span>
+                      )}
+                    </div>
+                  </td>
                   {/* Orders count */}
                   <td className="px-6 py-4 hidden sm:table-cell">
                     <div className="flex items-center gap-1.5 text-xs text-foreground font-semibold">

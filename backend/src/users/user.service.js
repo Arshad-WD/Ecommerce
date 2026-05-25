@@ -27,6 +27,7 @@ class UserService {
           OR: [
             { name: { contains: search, mode: 'insensitive' } },
             { email: { contains: search, mode: 'insensitive' } },
+            { mobileNumber: { contains: search, mode: 'insensitive' } },
           ],
         }
       : {};
