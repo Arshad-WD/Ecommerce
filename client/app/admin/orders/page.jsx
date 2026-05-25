@@ -79,13 +79,16 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     let result = [...orders];
 
-    // 1. Search Query filter (matches ID, Customer Name, or Customer Email)
+    // 1. Search Query filter (matches ID, Customer Name, Customer Email, or Mobile Number)
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       result = result.filter(order => 
         order.id.toLowerCase().includes(term) ||
         (order.user?.name || '').toLowerCase().includes(term) ||
-        (order.user?.email || '').toLowerCase().includes(term)
+        (order.user?.email || '').toLowerCase().includes(term) ||
+        (order.user?.mobileNumber || '').includes(term) ||
+        (order.user?.mobile_number || '').includes(term) ||
+        (order.shippingAddress?.mobileNumber || '').includes(term)
       );
     }
 
@@ -258,6 +261,11 @@ export default function AdminOrdersPage() {
                     <div className="flex flex-col">
                       <span className="font-semibold text-foreground text-xs">{order.user?.name || 'Guest User'}</span>
                       <span className="text-[10px] text-muted tracking-wide truncate max-w-[160px]">{order.user?.email || 'guest@atelier.com'}</span>
+                      {(order.user?.mobileNumber || order.user?.mobile_number) && (
+                        <span className="text-[10px] text-neutral-400 font-mono mt-1">
+                          {order.user.mobileNumber || order.user.mobile_number}
+                        </span>
+                      )}
                     </div>
                   </td>
                   {/* Delivery Address */}
