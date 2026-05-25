@@ -7,11 +7,12 @@
   "license": "UNLICENSED",
   "scripts": {
     "format": "prettier --write \"**/*.js\"",
-    "start": "babel-node index.js",
+    "start": "node index.js",
     "start:dev": "nodemon",
     "test": "jest",
     "test:cov": "jest --coverage",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "vercel-build": "prisma generate"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
